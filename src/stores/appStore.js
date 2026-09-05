@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { initializeDatabase } from '../database/db';
 import { notificationService } from '../services/notification/notificationService';
 import { permissionService } from '../services/permissions/permissionService';
+import { runReminderBootstrap } from '../services/reminder/reminderBootstrap';
 import { seedDefaults } from '../services/settings/settingsService';
 import { LOG_CATEGORY, logger } from '../utils/logger';
 import { useDashboardStore } from './dashboardStore';
@@ -48,10 +49,12 @@ export const useAppStore = create((set, get) => ({
       const permissions = await permissionService.getSnapshot();
 
       await useSettingsStore.getState().hydrate();
-      await useDashboardStore.getState().hydrate();
 
-      // Schedule reconciliation belongs here — it lands with Phase 3/4 and the
-      // scheduler stub intentionally reports itself as unimplemented until then.
+      // Queued notification actions are applied before the dashboard is built,
+      // so the first frame already reflects what the user tapped while away.
+      await runReminderBootstrap('startup');
+
+      await useDashboardStore.getState().hydrate();
 
       set({ status: BOOT_STATUS.READY, schemaVersion: version, permissions });
       logger.info(LOG_CATEGORY.UI, 'Bootstrap complete');
@@ -68,6 +71,13 @@ export const useAppStore = create((set, get) => ({
     const permissions = await permissionService.getSnapshot();
     set({ permissions });
     return permissions;
+  },
+
+  /** Called when the app returns to the foreground. */
+  async resume() {
+    if (get().status !== BOOT_STATUS.READY) return;
+    await runReminderBootstrap('resume');
+    await useDashboardStore.getState().refresh();
   },
 
   retry() {

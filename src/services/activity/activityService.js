@@ -6,13 +6,14 @@ import {
   countActivities,
   getActivitiesForRange,
 } from '../../database/repositories/activityRepository';
+import { BUCKET, summariseActivities } from '../analytics/aggregations';
+import { ACTIVITY_VIEWS } from '../analytics/ranges';
 
 /**
  * Activity read model.
  *
- * Day is real in this phase because it is the cheapest honest way to prove that
- * writes persisted. Week/month/year aggregation is Phase 10 and stays absent
- * rather than being approximated.
+ * Day is a literal timeline; the wider views are aggregations of the same rows.
+ * Nothing is estimated — an empty range reports itself as empty.
  */
 
 function toTimelineItem(activity) {
@@ -45,4 +46,15 @@ export async function getDayTimeline(date = new Date()) {
 
 export async function countActivitiesInRange(start, end) {
   return countActivities({ start, end });
+}
+
+/** Week and month bucket by day; year buckets by month. */
+export async function getRangeSummary(view, range) {
+  const activities = await getActivitiesForRange(range.start, range.end, { order: 'ASC' });
+
+  return summariseActivities(activities, {
+    start: range.start,
+    end: range.end,
+    granularity: view === ACTIVITY_VIEWS.YEAR ? BUCKET.MONTH : BUCKET.DAY,
+  });
 }

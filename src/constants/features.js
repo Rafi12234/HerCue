@@ -7,17 +7,17 @@
 export const FEATURES = {
   /** Phase 2 — repositories read/write real dashboard data. */
   persistentDashboard: true,
-  /** Phase 3/4 — occurrence scheduling and native alarm delivery. */
-  reminderScheduling: false,
-  /** Phase 4 — spoken reminder sentence via TextToSpeech. */
-  spokenReminders: false,
-  /** Phase 4 — reminder vibration waveform. */
-  reminderVibration: false,
-  /** Phase 5 — medicine CRUD. */
-  medicineManagement: false,
+  /** Phase 3 — occurrence scheduling and native alarm delivery. */
+  reminderScheduling: true,
+  /** Phase 3 — spoken reminder sentence via TextToSpeech. */
+  spokenReminders: true,
+  /** Phase 3 — reminder vibration waveform. */
+  reminderVibration: true,
+  /** Phase 3 — medicine CRUD. */
+  medicineManagement: true,
   /** Phase 8 — cycle persistence and next-period estimation. */
   periodPersistence: true,
-  /** Phase 9 — in-app notification inbox is wired to SQLite; nothing writes to it yet. */
+  /** Phase 3 — inbox is fed by real reminder deliveries. */
   notificationInbox: true,
   /** Phase 10 — week/month/year aggregation. Day timeline is live from Phase 2. */
   activityAnalytics: false,

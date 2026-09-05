@@ -4,7 +4,9 @@ import { useFocusEffect } from 'expo-router';
 import { ListChecks } from 'lucide-react-native';
 
 import { ActivityTimelineItem } from '../../src/components/activity/ActivityTimelineItem';
+import { MiniBarChart } from '../../src/components/activity/MiniBarChart';
 import { RangeNavigator } from '../../src/components/activity/RangeNavigator';
+import { RangeSummary } from '../../src/components/activity/RangeSummary';
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { AppText } from '../../src/components/common/AppText';
 import {
@@ -12,10 +14,11 @@ import {
   SegmentedContent,
 } from '../../src/components/common/AnimatedSegmentedControl';
 import { Card } from '../../src/components/common/Card';
-import { DevelopmentNotice } from '../../src/components/common/DevelopmentNotice';
 import { EmptyState } from '../../src/components/common/EmptyState';
 import { ScreenContainer } from '../../src/components/common/ScreenContainer';
-import { getDayTimeline } from '../../src/services/activity/activityService';
+import { SectionHeader } from '../../src/components/common/SectionHeader';
+import { getDayTimeline, getRangeSummary } from '../../src/services/activity/activityService';
+import { seriesForType } from '../../src/services/analytics/aggregations';
 import {
   ACTIVITY_VIEW_OPTIONS,
   ACTIVITY_VIEWS,
@@ -30,38 +33,47 @@ import { LOG_CATEGORY, logger } from '../../src/utils/logger';
 /**
  * Activity screen.
  *
- * Day reads real rows from `activity_logs`. Week/month/year stay empty until
- * Phase 10 can aggregate them properly — a placeholder chart would be
- * indistinguishable from a real one.
+ * Day is a literal timeline of `activity_logs`; the wider views aggregate the
+ * same rows. Every number and bar comes from stored data — an empty range shows
+ * an empty state rather than a flat chart.
  */
 export default function ActivityScreen() {
   const [view, setView] = useState(ACTIVITY_VIEWS.DAY);
   const [anchor, setAnchor] = useState(() => new Date());
   const [timeline, setTimeline] = useState(null);
+  const [summary, setSummary] = useState(null);
 
   const range = useMemo(() => buildRange(view, anchor), [view, anchor]);
   const emptyCopy = VIEW_EMPTY_COPY[view];
   const isAtPresent = !range.canGoForward;
   const isDayView = view === ACTIVITY_VIEWS.DAY;
 
-  const loadDay = useCallback(async () => {
-    if (!isDayView) return;
+  const load = useCallback(async () => {
     try {
-      setTimeline(await getDayTimeline(anchor));
+      if (isDayView) {
+        setTimeline(await getDayTimeline(anchor));
+        setSummary(null);
+      } else {
+        setSummary(await getRangeSummary(view, range));
+        setTimeline(null);
+      }
     } catch (error) {
-      logger.error(LOG_CATEGORY.ANALYTICS, 'Could not load the day timeline', error);
+      logger.error(LOG_CATEGORY.ANALYTICS, 'Could not load activity', error);
       setTimeline({ items: [], completedCount: 0, totalCount: 0 });
+      setSummary(null);
     }
-  }, [isDayView, anchor]);
+    // `range` is derived from view+anchor, so those are the real inputs.
+  }, [isDayView, view, anchor, range]);
 
-  // Re-runs on first focus and whenever the anchor or view changes.
   useFocusEffect(
     useCallback(() => {
-      loadDay();
-    }, [loadDay])
+      load();
+    }, [load])
   );
 
   const hasDayItems = isDayView && timeline?.items?.length > 0;
+  const hasSummary = !isDayView && summary?.hasData;
+  const chartData = hasSummary ? seriesForType(summary) : [];
 
   return (
     <ScreenContainer tone="activity">
@@ -93,7 +105,7 @@ export default function ActivityScreen() {
       <SegmentedContent segmentKey={`${view}-${range.label}`}>
         {hasDayItems ? (
           <Card style={styles.contentCard}>
-            <View style={styles.summary}>
+            <View style={styles.summaryRow}>
               <AppText variant="caption" color={colors.textFaint}>
                 {`${timeline.totalCount} ${timeline.totalCount === 1 ? 'entry' : 'entries'}`}
               </AppText>
@@ -106,20 +118,27 @@ export default function ActivityScreen() {
               />
             ))}
           </Card>
+        ) : hasSummary ? (
+          <View>
+            <Card style={styles.contentCard}>
+              <RangeSummary summary={summary} />
+            </Card>
+
+            <SectionHeader
+              title="Confirmations"
+              caption={view === ACTIVITY_VIEWS.YEAR ? 'By month' : 'By day'}
+              style={styles.section}
+            />
+            <Card>
+              <MiniBarChart data={chartData} />
+            </Card>
+          </View>
         ) : (
           <Card style={styles.contentCard}>
             <EmptyState icon={ListChecks} title={emptyCopy.title} message={emptyCopy.message} />
           </Card>
         )}
       </SegmentedContent>
-
-      {isDayView ? null : (
-        <DevelopmentNotice
-          title="Summaries and charts arrive in a later update"
-          message="They will be calculated from your stored activity only — no sample figures will ever be shown here."
-          style={styles.notice}
-        />
-      )}
     </ScreenContainer>
   );
 }
@@ -132,10 +151,10 @@ const styles = StyleSheet.create({
   contentCard: {
     marginTop: layout.cardGap,
   },
-  summary: {
+  summaryRow: {
     marginBottom: spacing.base,
   },
-  notice: {
-    marginTop: spacing.lg,
+  section: {
+    marginTop: layout.sectionGap,
   },
 });

@@ -1,0 +1,32 @@
+apply plugin: 'com.android.library'
+
+group = 'expo.modules.hercuereminders'
+version = '1.0.0'
+
+def expoModulesCorePlugin = new File(
+  project(":expo-modules-core").projectDir.absolutePath,
+  "ExpoModulesCorePlugin.gradle"
+)
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+// Inherit compile/min/target SDK from expo-modules-core so this module can never
+// drift from the versions the rest of the Expo build uses.
+useDefaultAndroidSdkVersions()
+
+android {
+  namespace "expo.modules.hercuereminders"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation "androidx.core:core-ktx:1.13.1"
+}

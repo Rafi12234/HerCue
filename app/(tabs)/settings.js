@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import Constants from 'expo-constants';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Bath,
   BellRing,
@@ -37,9 +37,9 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useDashboardStore } from '../../src/stores/dashboardStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { resetDatabase } from '../../src/database/db';
+import { reminderScheduler } from '../../src/services/reminder/reminderScheduler';
 import { seedDefaults } from '../../src/services/settings/settingsService';
 import {
-  EXACT_ALARM_STATUS,
   PERMISSION_STATUS,
   permissionService,
 } from '../../src/services/permissions/permissionService';
@@ -65,15 +65,19 @@ const PERMISSION_COPY = {
 };
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const permissions = useAppStore((state) => state.permissions);
   const refreshPermissions = useAppStore((state) => state.refreshPermissions);
   const settings = useSettingsStore();
   const [isRequesting, setIsRequesting] = useState(false);
+  const [canScheduleExact, setCanScheduleExact] = useState(false);
+  const [testState, setTestState] = useState('idle');
 
   // Permission can change in system settings while the app is backgrounded.
   useFocusEffect(
     useCallback(() => {
       refreshPermissions();
+      reminderScheduler.canScheduleExact().then(setCanScheduleExact);
     }, [refreshPermissions])
   );
 
@@ -100,6 +104,23 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleExactAlarmPress = useCallback(async () => {
+    await reminderScheduler.openAlarmSettings();
+    setCanScheduleExact(await reminderScheduler.canScheduleExact());
+  }, []);
+
+  const handleTestReminder = useCallback(async () => {
+    const result = await reminderScheduler.testReminder(5);
+
+    if (!result.ok) {
+      Alert.alert('Test reminder unavailable', result.message ?? 'This build cannot send reminders.');
+      return;
+    }
+
+    setTestState('sent');
+    setTimeout(() => setTestState('idle'), 12000);
+  }, []);
+
   // Destructive and irreversible, so it states exactly what goes and asks twice
   // over (`docs/06_DATABASE_AND_DATA_MODEL.md` §10).
   const handleClearData = useCallback(() => {
@@ -113,6 +134,9 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Alarms first: clearing the database would otherwise leave the
+              // native layer holding orphaned alarms with no matching rows.
+              await reminderScheduler.cancelAll();
               await resetDatabase();
               await seedDefaults();
               await useSettingsStore.getState().hydrate();
@@ -162,13 +186,13 @@ export default function SettingsScreen() {
 
       <SettingsSection
         title="Reminder preferences"
-        caption="Each reminder gets its own settings screen as its module is built."
+        caption="Timing, active hours and how each reminder alerts you."
       >
         <SettingsRow
           icon={Droplet}
           label="Water"
           description="Interval, active hours and daily goal"
-          state="soon"
+          onPress={() => router.push('/settings/reminder/water')}
           iconTint={categoryColors.WATER.tint}
           iconColor={categoryColors.WATER.deep}
         />
@@ -176,7 +200,7 @@ export default function SettingsScreen() {
           icon={Pill}
           label="Medicine"
           description="Add medicines, times and repeat days"
-          state="soon"
+          onPress={() => router.push('/medicine')}
           iconTint={categoryColors.MEDICINE.tint}
           iconColor={categoryColors.MEDICINE.deep}
         />
@@ -184,7 +208,7 @@ export default function SettingsScreen() {
           icon={UtensilsCrossed}
           label="Food"
           description="Six-hour check, measured from your last meal"
-          state="soon"
+          onPress={() => router.push('/settings/reminder/food')}
           iconTint={categoryColors.FOOD.tint}
           iconColor={categoryColors.FOOD.deep}
         />
@@ -192,7 +216,7 @@ export default function SettingsScreen() {
           icon={Bath}
           label="Bathroom"
           description="Interval and active hours"
-          state="soon"
+          onPress={() => router.push('/settings/reminder/bathroom')}
           iconTint={categoryColors.BATHROOM.tint}
           iconColor={categoryColors.BATHROOM.deep}
         />
@@ -256,18 +280,29 @@ export default function SettingsScreen() {
           icon={ShieldCheck}
           label="Alarms & reminders"
           description={
-            permissions?.exactAlarms === EXACT_ALARM_STATUS.UNKNOWN
-              ? 'Precise reminders need Android’s Alarms & reminders access. HerCue will check and guide you once the alarm engine is added.'
-              : 'Precise reminders need Android’s Alarms & reminders access.'
+            canScheduleExact
+              ? 'Reminders can fire at the exact minute you chose.'
+              : 'Without this, Android may deliver reminders a few minutes late to save battery.'
           }
-          value="Not checked"
-          state="soon"
+          value={canScheduleExact ? 'Allowed' : 'Limited'}
+          onPress={handleExactAlarmPress}
         />
         <SettingsRow
           icon={ExternalLink}
           label="System notification settings"
           description="Sound, importance and lock-screen visibility are controlled by Android"
           onPress={() => permissionService.openSystemSettings()}
+        />
+        <SettingsRow
+          icon={BellRing}
+          label="Test reminder"
+          description={
+            testState === 'sent'
+              ? 'Sent — it should arrive in about five seconds.'
+              : 'Fires a real reminder in five seconds so you can check this device'
+          }
+          value={testState === 'sent' ? 'On its way' : undefined}
+          onPress={handleTestReminder}
           isLast
         />
       </SettingsSection>

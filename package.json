@@ -11,10 +11,12 @@
     "lint": "eslint .",
     "test": "jest",
     "bundle:check": "expo export --platform android --output-dir .expo-bundle-check",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",
+    "@react-native-community/datetimepicker": "8.4.4",
     "date-fns": "^4.4.0",
     "expo": "~54.0.36",
     "expo-constants": "~18.0.14",

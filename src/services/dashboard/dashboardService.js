@@ -8,6 +8,7 @@ import {
   getLatestActivityByType,
 } from '../../database/repositories/activityRepository';
 import { getActiveMedicinesWithSchedules } from '../../database/repositories/medicineRepository';
+import { getNextPendingOccurrence } from '../../database/repositories/reminderRepository';
 import { applyScheduleTime } from '../../utils/dates';
 import { getPeriodOverview } from '../period/periodService';
 import { nextFixedIntervalSlot, planNextCheck } from '../reminder/intervalPlanner';
@@ -102,13 +103,15 @@ export async function buildDashboard(now = new Date()) {
   const foodConfig = configs[REMINDER_TYPES.FOOD];
   const bathroomConfig = configs[REMINDER_TYPES.BATHROOM];
 
-  const [waterCount, lastWater, lastFood, lastBathroom, medicine] = await Promise.all([
-    countActivitiesForDay(REMINDER_TYPES.WATER, { action: ACTIVITY_ACTION.DRANK }, now),
-    getLatestActivityByType(REMINDER_TYPES.WATER, { action: ACTIVITY_ACTION.DRANK }),
-    getLatestActivityByType(REMINDER_TYPES.FOOD, { action: ACTIVITY_ACTION.ATE }),
-    getLatestActivityByType(REMINDER_TYPES.BATHROOM, { action: ACTIVITY_ACTION.WENT }),
-    buildMedicineSection(now),
-  ]);
+  const [waterCount, lastWater, lastFood, lastBathroom, medicine, nextOccurrence] =
+    await Promise.all([
+      countActivitiesForDay(REMINDER_TYPES.WATER, { action: ACTIVITY_ACTION.DRANK }, now),
+      getLatestActivityByType(REMINDER_TYPES.WATER, { action: ACTIVITY_ACTION.DRANK }),
+      getLatestActivityByType(REMINDER_TYPES.FOOD, { action: ACTIVITY_ACTION.ATE }),
+      getLatestActivityByType(REMINDER_TYPES.BATHROOM, { action: ACTIVITY_ACTION.WENT }),
+      buildMedicineSection(now),
+      getNextPendingOccurrence(),
+    ]);
 
   const foodNext = planNextCheck({
     lastCompletedAt: lastFood?.occurredAt ?? null,
@@ -134,6 +137,17 @@ export async function buildDashboard(now = new Date()) {
   return {
     source: 'DATABASE',
     generatedAt: now.toISOString(),
+
+    // The genuinely next scheduled alarm, not a projection.
+    nextOccurrence: nextOccurrence
+      ? {
+          id: nextOccurrence.id,
+          type: nextOccurrence.type,
+          scheduledAt: nextOccurrence.scheduledAt,
+          message: nextOccurrence.message,
+          title: nextOccurrence.metadata?.title ?? null,
+        }
+      : null,
 
     water: {
       count: waterCount,

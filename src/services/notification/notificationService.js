@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Linking, Platform } from 'react-native';
 
+import { HerCueReminders } from '../../../modules/hercue-reminders';
 import { ANDROID_NOTIFICATION_CHANNELS } from '../../constants/config';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
 import { failed, ok, unimplemented } from '../serviceResult';
@@ -8,9 +9,9 @@ import { failed, ok, unimplemented } from '../serviceResult';
 /**
  * Notification adapter.
  *
- * Permission handling and Android channel setup are real from Phase 0 because
- * the rest of the reminder engine depends on them. Actually *delivering* a
- * reminder arrives with Water (Phase 3) and the native alarm layer (Phase 4).
+ * Channels and permissions go through expo-notifications; actual reminder
+ * delivery goes through the native layer, because an alarm usually fires with
+ * no JavaScript runtime alive to post anything.
  */
 
 export const PERMISSION_STATUS = {
@@ -105,11 +106,28 @@ export const notificationService = {
     }
   },
 
-  async show() {
-    return unimplemented('Reminder notification delivery', 'Phase 3 — Water');
+  /** Posts immediately, bypassing the alarm — used for previews and tests. */
+  async show({ id, type, title, body, channelId }) {
+    if (!HerCueReminders.isAvailable()) {
+      return unimplemented('Reminder notification delivery', 'a device build');
+    }
+
+    HerCueReminders.showNow({
+      id,
+      type,
+      title,
+      body,
+      channelId: channelId ?? ANDROID_NOTIFICATION_CHANNELS.general,
+    });
+    logger.debug(LOG_CATEGORY.NOTIFICATION, `Notification shown for ${type}`);
+    return ok();
   },
 
-  async dismiss() {
-    return unimplemented('Notification dismissal', 'Phase 3 — Water');
+  async dismiss(id) {
+    if (!HerCueReminders.isAvailable()) {
+      return unimplemented('Notification dismissal', 'a device build');
+    }
+    HerCueReminders.dismissNotification(id);
+    return ok();
   },
 };

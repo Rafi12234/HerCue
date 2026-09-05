@@ -1,0 +1,73 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.hercuereminders" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+7-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:3:3-77
+7-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:3:20-74
+8    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+8-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:4:3-72
+8-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:4:20-69
+9    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+9-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:5:3-79
+9-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:5:20-76
+10    <uses-permission android:name="android.permission.VIBRATE" />
+10-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:6:3-64
+10-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:6:20-61
+11    <uses-permission android:name="android.permission.WAKE_LOCK" />
+11-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:7:3-66
+11-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:7:20-63
+12    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+12-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:8:3-75
+12-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:8:20-72
+13
+14    <queries>
+14-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:10:3-14:13
+15        <intent>
+15-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:11:5-13:14
+16            <action android:name="android.intent.action.TTS_SERVICE" />
+16-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:12:7-66
+16-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:12:15-63
+17        </intent>
+18    </queries>
+19
+20    <application>
+20-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:16:3-35:17
+21        <receiver
+21-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:17:5-19:34
+22            android:name="expo.modules.hercuereminders.ReminderReceiver"
+22-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:18:7-39
+23            android:exported="false" />
+23-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:19:7-31
+24        <receiver
+24-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:21:5-23:34
+25            android:name="expo.modules.hercuereminders.ActionReceiver"
+25-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:22:7-37
+26            android:exported="false" />
+26-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:23:7-31
+27        <receiver
+27-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:25:5-34:16
+28            android:name="expo.modules.hercuereminders.BootReceiver"
+28-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:26:7-35
+29            android:directBootAware="false"
+29-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:28:7-38
+30            android:exported="true" >
+30-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:27:7-30
+31            <intent-filter>
+31-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:29:7-33:23
+32                <action android:name="android.intent.action.BOOT_COMPLETED" />
+32-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:30:9-71
+32-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:30:17-68
+33                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+33-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:31:9-74
+33-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:31:17-71
+34                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+34-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:32:9-76
+34-->D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:32:17-73
+35            </intent-filter>
+36        </receiver>
+37    </application>
+38
+39</manifest>

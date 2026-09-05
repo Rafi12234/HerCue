@@ -1,31 +1,38 @@
+import { HerCueReminders } from '../../../modules/hercue-reminders';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
-import { unimplemented } from '../serviceResult';
+import { ok, unimplemented } from '../serviceResult';
 
 /**
- * Reminder vibration adapter (Android VibrationEffect in Phase 4).
+ * Reminder vibration adapter, backed by Android VibrationEffect.
  *
  * This is the strong, deliberate reminder waveform — not the light UI haptics
  * in `utils/haptics`. It is always finite: the phone must never buzz endlessly.
  */
 
-const PHASE = 'Phase 4 — reminder engine hardening';
+const PHASE = 'a later update';
 
 /** pulse · pause · pulse · longer pause · final pulse */
 export const REMINDER_PATTERN_MS = [0, 320, 180, 320, 320, 480];
 
 export const vibrationService = {
-  isImplemented: false,
+  get isImplemented() {
+    return HerCueReminders.isAvailable();
+  },
 
   async isAvailable() {
-    return false;
+    return HerCueReminders.isAvailable() && HerCueReminders.hasVibrator();
   },
 
   async playReminderPattern() {
-    logger.debug(LOG_CATEGORY.SCHEDULER, 'playReminderPattern called on stub');
-    return unimplemented('Reminder vibration', PHASE);
+    if (!HerCueReminders.isAvailable()) return unimplemented('Reminder vibration', PHASE);
+    HerCueReminders.vibrate(REMINDER_PATTERN_MS);
+    logger.debug(LOG_CATEGORY.SCHEDULER, 'Reminder vibration triggered');
+    return ok();
   },
 
   async cancel() {
-    return unimplemented('Reminder vibration', PHASE);
+    if (!HerCueReminders.isAvailable()) return unimplemented('Reminder vibration', PHASE);
+    HerCueReminders.stopVibration();
+    return ok();
   },
 };

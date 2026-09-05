@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,6 +34,8 @@ export default function RootLayout() {
   const error = useAppStore((state) => state.error);
   const bootstrap = useAppStore((state) => state.bootstrap);
   const retry = useAppStore((state) => state.retry);
+  const resume = useAppStore((state) => state.resume);
+  const appState = useRef(AppState.currentState);
 
   useReducedMotionSync();
 
@@ -47,6 +50,18 @@ export default function RootLayout() {
   useEffect(() => {
     bootstrap();
   }, [bootstrap]);
+
+  // Notification actions are applied while the app was away, so the schedule
+  // and the dashboard are both refreshed on the way back in.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        resume();
+      }
+      appState.current = next;
+    });
+    return () => subscription.remove();
+  }, [resume]);
 
   // Fonts failing is a cosmetic problem, not a blocking one: fall through to the
   // platform font rather than trapping the user on a splash screen.
@@ -85,6 +100,11 @@ export default function RootLayout() {
               name="medicine/index"
               options={{ animation: 'slide_from_bottom', presentation: 'card' }}
             />
+            <Stack.Screen
+              name="medicine/form"
+              options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+            />
+            <Stack.Screen name="settings/reminder/[type]" />
           </Stack>
         )}
       </SafeAreaProvider>

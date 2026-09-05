@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { addDays, addMonths, eachDayOfInterval, format, parseISO } from 'date-fns';
-import { CalendarHeart, Flower2, Info } from 'lucide-react-native';
+import { CalendarHeart, CalendarPlus, Check, Flower2, Info } from 'lucide-react-native';
 
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { AppText } from '../../src/components/common/AppText';
 import { Card } from '../../src/components/common/Card';
-import { DevelopmentNotice } from '../../src/components/common/DevelopmentNotice';
 import { EmptyState } from '../../src/components/common/EmptyState';
 import { QuickActionButton } from '../../src/components/common/QuickActionButton';
 import { ScreenContainer } from '../../src/components/common/ScreenContainer';
@@ -18,7 +18,10 @@ import { DEFAULTS } from '../../src/constants/config';
 import { REMINDER_TYPES } from '../../src/constants/reminderTypes';
 import { usePeriodOverview } from '../../src/hooks/usePeriodOverview';
 import { careActions } from '../../src/services/care/careActions';
+import { endPeriod, removeCycle } from '../../src/services/period/periodService';
+import { PressableScale } from '../../src/components/common/PressableScale';
 import { categoryColors, colors } from '../../src/theme/colors';
+import { radii } from '../../src/theme/radii';
 import { layout, spacing } from '../../src/theme/spacing';
 import { formatMonthYear, formatShortDate } from '../../src/utils/dates';
 import { EMPTY_COPY } from '../../src/utils/copy';
@@ -35,6 +38,7 @@ function toDateSet(startDate, endDate) {
 export default function PeriodScreen() {
   const { overview, reload } = usePeriodOverview();
   const [month, setMonth] = useState(() => new Date());
+  const [picker, setPicker] = useState(null);
 
   const history = overview?.history;
   const hasHistory = Boolean(history?.length);
@@ -61,7 +65,58 @@ export default function PeriodScreen() {
     return result;
   }, [reload]);
 
+  const handlePickStartDate = useCallback(() => {
+    setPicker({ mode: 'START', value: new Date() });
+  }, []);
+
+  const handleEndPeriod = useCallback(() => {
+    setPicker({ mode: 'END', value: new Date() });
+  }, []);
+
+  const handlePicked = useCallback(
+    async (event, selected) => {
+      const mode = picker?.mode;
+      setPicker(null);
+      if (event.type === 'dismissed' || !selected || !mode) return;
+
+      const result =
+        mode === 'START'
+          ? await careActions.startPeriod(selected)
+          : await endPeriod(selected);
+
+      if (!result.ok) {
+        Alert.alert('Couldn’t save that', result.message ?? 'Please try again.');
+        return;
+      }
+      await reload();
+    },
+    [picker, reload]
+  );
+
+  const handleEditCycle = useCallback(
+    (cycle) => {
+      Alert.alert(
+        `${formatShortDate(cycle.startDate)}`,
+        'Remove this entry? Your estimate will be recalculated.',
+        [
+          { text: 'Keep it', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              await removeCycle(cycle.id);
+              await reload();
+            },
+          },
+        ]
+      );
+    },
+    [reload]
+  );
+
   const countdown = periodCountdownCopy(estimatedNextDate);
+  const latestCycle = history?.[0] ?? null;
+  const needsEnd = Boolean(latestCycle && !latestCycle.endDate);
 
   return (
     <ScreenContainer tone="period">
@@ -106,7 +161,44 @@ export default function PeriodScreen() {
           fullWidth
           style={styles.heroAction}
         />
+
+        <View style={styles.secondaryRow}>
+          <PressableScale
+            onPress={handlePickStartDate}
+            haptic="press"
+            scaleTo={0.97}
+            style={[styles.secondary, { backgroundColor: accent.tint }]}
+          >
+            <CalendarPlus size={15} color={accent.deep} strokeWidth={2.3} />
+            <AppText variant="caption" color={accent.deep} numberOfLines={1}>
+              Another date
+            </AppText>
+          </PressableScale>
+
+          {needsEnd ? (
+            <PressableScale
+              onPress={handleEndPeriod}
+              haptic="press"
+              scaleTo={0.97}
+              style={[styles.secondary, { backgroundColor: accent.tint }]}
+            >
+              <Check size={15} color={accent.deep} strokeWidth={2.6} />
+              <AppText variant="caption" color={accent.deep} numberOfLines={1}>
+                Period ended
+              </AppText>
+            </PressableScale>
+          ) : null}
+        </View>
       </Card>
+
+      {picker ? (
+        <DateTimePicker
+          value={picker.value}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={handlePicked}
+        />
+      ) : null}
 
       <SectionHeader title="Calendar" style={styles.section} />
       <Card>
@@ -132,8 +224,12 @@ export default function PeriodScreen() {
       {hasHistory ? (
         <Card>
           {history.map((cycle, index) => (
-            <View
+            <PressableScale
               key={cycle.id}
+              onPress={() => handleEditCycle(cycle)}
+              haptic="press"
+              scaleTo={0.99}
+              accessibilityLabel={`Cycle starting ${formatShortDate(cycle.startDate)}`}
               style={[styles.historyRow, index > 0 && styles.historyRowDivided]}
             >
               <View style={styles.historyDates}>
@@ -148,7 +244,7 @@ export default function PeriodScreen() {
                     : 'First recorded cycle'}
                 </AppText>
               </View>
-            </View>
+            </PressableScale>
           ))}
         </Card>
       ) : (
@@ -170,12 +266,6 @@ export default function PeriodScreen() {
           Predictions are based on the dates you record and cycles can naturally vary.
         </AppText>
       </View>
-
-      <DevelopmentNotice
-        title="End dates, editing and expected-period reminders come later"
-        message="Cycle starts and the next-date estimate are saved on this device now."
-        style={styles.notice}
-      />
     </ScreenContainer>
   );
 }
@@ -193,6 +283,21 @@ const styles = StyleSheet.create({
   },
   heroAction: {
     marginTop: spacing.lg,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  secondary: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs + 2,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.pill,
   },
   section: {
     marginTop: layout.sectionGap,

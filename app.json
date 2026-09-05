@@ -29,7 +29,8 @@
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.USE_EXACT_ALARM"
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "ios": {
@@ -57,7 +58,8 @@
           "color": "#E9A6B4"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false

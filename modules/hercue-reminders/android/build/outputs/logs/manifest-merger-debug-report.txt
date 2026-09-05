@@ -1,0 +1,84 @@
+-- Merging decision tree log ---
+manifest
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:1:1-37:12
+INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:1:1-37:12
+	package
+		INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:1:11-69
+uses-permission#android.permission.SCHEDULE_EXACT_ALARM
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:3:3-77
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:3:20-74
+uses-permission#android.permission.USE_EXACT_ALARM
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:4:3-72
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:4:20-69
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:5:3-79
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:5:20-76
+uses-permission#android.permission.VIBRATE
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:6:3-64
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:6:20-61
+uses-permission#android.permission.WAKE_LOCK
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:7:3-66
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:7:20-63
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:8:3-75
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:8:20-72
+queries
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:10:3-14:13
+intent#action:name:android.intent.action.TTS_SERVICE
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:11:5-13:14
+action#android.intent.action.TTS_SERVICE
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:12:7-66
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:12:15-63
+application
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:16:3-35:17
+receiver#expo.modules.hercuereminders.ReminderReceiver
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:17:5-19:34
+	android:exported
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:19:7-31
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:18:7-39
+receiver#expo.modules.hercuereminders.ActionReceiver
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:21:5-23:34
+	android:exported
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:23:7-31
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:22:7-37
+receiver#expo.modules.hercuereminders.BootReceiver
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:25:5-34:16
+	android:exported
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:27:7-30
+	android:directBootAware
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:28:7-38
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:26:7-35
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED+action:name:android.intent.action.QUICKBOOT_POWERON
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:29:7-33:23
+action#android.intent.action.BOOT_COMPLETED
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:30:9-71
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:30:17-68
+action#android.intent.action.QUICKBOOT_POWERON
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:31:9-74
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:31:17-71
+action#android.intent.action.MY_PACKAGE_REPLACED
+ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:32:9-76
+	android:name
+		ADDED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml:32:17-73
+uses-sdk
+INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml
+INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from D:\All Projects\HerCue\modules\hercue-reminders\android\src\main\AndroidManifest.xml
