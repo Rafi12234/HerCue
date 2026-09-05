@@ -28,6 +28,11 @@ export const DEFAULTS = {
   averageCycleLengthDays: 28,
   averagePeriodDurationDays: 5,
   cyclesUsedForEstimate: 6,
+
+  periodRemindersEnabled: false,
+  /** Days before the estimate to nudge; 0 means the expected day itself. */
+  periodRemindDaysBefore: [3, 1, 0],
+  periodRemindTime: '09:00',
 };
 
 /** How far ahead the scheduler materialises occurrences (Phase 3+). */

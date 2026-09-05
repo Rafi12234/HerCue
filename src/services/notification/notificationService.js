@@ -106,6 +106,32 @@ export const notificationService = {
     }
   },
 
+  /**
+   * Android lets the user mute or downgrade a channel after it is created, and
+   * the app cannot override that — so the real state is read back and reported.
+   */
+  async getChannelHealth() {
+    if (Platform.OS !== 'android') return { supported: false, blocked: [], total: 0 };
+
+    try {
+      const channels = await Notifications.getNotificationChannelsAsync();
+      const ours = channels.filter((channel) =>
+        Object.values(ANDROID_NOTIFICATION_CHANNELS).includes(channel.id)
+      );
+
+      return {
+        supported: true,
+        total: ours.length,
+        blocked: ours
+          .filter((channel) => channel.importance === Notifications.AndroidImportance.NONE)
+          .map((channel) => channel.name ?? channel.id),
+      };
+    } catch (error) {
+      logger.warn(LOG_CATEGORY.NOTIFICATION, 'Could not read channel state', error);
+      return { supported: true, blocked: [], total: 0 };
+    }
+  },
+
   /** Posts immediately, bypassing the alarm — used for previews and tests. */
   async show({ id, type, title, body, channelId }) {
     if (!HerCueReminders.isAvailable()) {

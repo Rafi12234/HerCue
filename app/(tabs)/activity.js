@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ListChecks } from 'lucide-react-native';
 
 import { ActivityTimelineItem } from '../../src/components/activity/ActivityTimelineItem';
+import { CategoryFilter } from '../../src/components/activity/CategoryFilter';
 import { MiniBarChart } from '../../src/components/activity/MiniBarChart';
+import { MonthConsistencyGrid } from '../../src/components/activity/MonthConsistencyGrid';
 import { RangeNavigator } from '../../src/components/activity/RangeNavigator';
 import { RangeSummary } from '../../src/components/activity/RangeSummary';
 import { AppHeader } from '../../src/components/common/AppHeader';
@@ -26,7 +28,7 @@ import {
   shiftAnchor,
   VIEW_EMPTY_COPY,
 } from '../../src/services/analytics/ranges';
-import { colors } from '../../src/theme/colors';
+import { colors, categoryColors } from '../../src/theme/colors';
 import { layout, spacing } from '../../src/theme/spacing';
 import { LOG_CATEGORY, logger } from '../../src/utils/logger';
 
@@ -38,10 +40,12 @@ import { LOG_CATEGORY, logger } from '../../src/utils/logger';
  * an empty state rather than a flat chart.
  */
 export default function ActivityScreen() {
+  const router = useRouter();
   const [view, setView] = useState(ACTIVITY_VIEWS.DAY);
   const [anchor, setAnchor] = useState(() => new Date());
   const [timeline, setTimeline] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [category, setCategory] = useState(null);
 
   const range = useMemo(() => buildRange(view, anchor), [view, anchor]);
   const emptyCopy = VIEW_EMPTY_COPY[view];
@@ -73,7 +77,9 @@ export default function ActivityScreen() {
 
   const hasDayItems = isDayView && timeline?.items?.length > 0;
   const hasSummary = !isDayView && summary?.hasData;
-  const chartData = hasSummary ? seriesForType(summary) : [];
+  const chartData = hasSummary ? seriesForType(summary, category) : [];
+  const accent = category ? categoryColors[category].base : colors.accent;
+  const isMonthView = view === ACTIVITY_VIEWS.MONTH;
 
   return (
     <ScreenContainer tone="activity">
@@ -115,6 +121,7 @@ export default function ActivityScreen() {
                 key={item.id}
                 item={item}
                 isLast={index === timeline.items.length - 1}
+                onPress={() => router.push(`/activity/${item.id}`)}
               />
             ))}
           </Card>
@@ -125,12 +132,21 @@ export default function ActivityScreen() {
             </Card>
 
             <SectionHeader
-              title="Confirmations"
+              title={isMonthView ? 'Consistency' : 'Confirmations'}
               caption={view === ACTIVITY_VIEWS.YEAR ? 'By month' : 'By day'}
               style={styles.section}
             />
+
+            <View style={styles.filter}>
+              <CategoryFilter summary={summary} value={category} onChange={setCategory} />
+            </View>
+
             <Card>
-              <MiniBarChart data={chartData} />
+              {isMonthView ? (
+                <MonthConsistencyGrid buckets={summary.buckets} accent={accent} type={category} />
+              ) : (
+                <MiniBarChart data={chartData} accent={accent} />
+              )}
             </Card>
           </View>
         ) : (
@@ -156,5 +172,8 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: layout.sectionGap,
+  },
+  filter: {
+    marginBottom: spacing.sm,
   },
 });

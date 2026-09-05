@@ -47,8 +47,11 @@ class ReminderReceiver : BroadcastReceiver() {
                 .onFailure { Log.e(TAG, "Vibration failed", it) }
         }
 
-        // The alarm has been consumed; a reboot must not replay it.
-        ReminderStore.removeScheduled(context, occurrenceId)
+        // The payload deliberately survives the trigger: Snooze, Taken and the
+        // food/bathroom follow-ups all need it, and they can be pressed minutes
+        // later with no JS runtime alive. ActionReceiver clears it on a terminal
+        // action, and stale entries are pruned by age.
+        ReminderStore.pruneScheduled(context)
 
         if (payload.speak && payload.speech.isNotBlank()) {
             speakWithWakeLock(context, payload)

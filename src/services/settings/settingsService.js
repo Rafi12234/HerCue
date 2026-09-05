@@ -31,6 +31,9 @@ const GLOBAL_DEFAULTS = {
   [SETTING_KEYS.DEFAULT_SNOOZE_MINUTES]: DEFAULTS.waterSnoozeMinutes,
   [SETTING_KEYS.WATER_DAILY_GOAL]: DEFAULTS.waterDailyGoal,
   [SETTING_KEYS.AVERAGE_CYCLE_LENGTH_DAYS]: DEFAULTS.averageCycleLengthDays,
+  [SETTING_KEYS.PERIOD_REMINDERS_ENABLED]: DEFAULTS.periodRemindersEnabled,
+  [SETTING_KEYS.PERIOD_REMIND_DAYS_BEFORE]: DEFAULTS.periodRemindDaysBefore,
+  [SETTING_KEYS.PERIOD_REMIND_TIME]: DEFAULTS.periodRemindTime,
 };
 
 /**
@@ -103,6 +106,9 @@ export async function loadSettings() {
     defaultSnoozeMinutes: Number(read(SETTING_KEYS.DEFAULT_SNOOZE_MINUTES)),
     waterDailyGoal: Number(read(SETTING_KEYS.WATER_DAILY_GOAL)),
     averageCycleLengthDays: Number(read(SETTING_KEYS.AVERAGE_CYCLE_LENGTH_DAYS)),
+    periodRemindersEnabled: Boolean(read(SETTING_KEYS.PERIOD_REMINDERS_ENABLED)),
+    periodRemindDaysBefore: read(SETTING_KEYS.PERIOD_REMIND_DAYS_BEFORE) ?? [3, 1, 0],
+    periodRemindTime: read(SETTING_KEYS.PERIOD_REMIND_TIME),
   };
 }
 

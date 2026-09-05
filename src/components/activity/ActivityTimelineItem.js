@@ -2,17 +2,25 @@ import { StyleSheet, View } from 'react-native';
 
 import { CategoryGlyph } from '../common/CategoryGlyph';
 import { AppText } from '../common/AppText';
+import { PressableScale } from '../common/PressableScale';
 import { StatusBadge } from '../common/StatusBadge';
 import { categoryColors, colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { formatClock } from '../../utils/dates';
 
 /** One row of the Day timeline: when it happened, what it was, how it ended. */
-export function ActivityTimelineItem({ item, isLast = false }) {
+export function ActivityTimelineItem({ item, isLast = false, onPress }) {
   const accent = categoryColors[item.type] ?? categoryColors.WATER;
 
   return (
-    <View style={styles.row}>
+    <PressableScale
+      onPress={onPress}
+      disabled={!onPress}
+      haptic="press"
+      scaleTo={0.99}
+      accessibilityLabel={`${item.typeLabel} ${item.actionLabel} at ${formatClock(item.occurredAt)}`}
+      style={styles.row}
+    >
       <View style={styles.rail}>
         <View style={[styles.dot, { backgroundColor: accent.base }]} />
         {isLast ? null : <View style={styles.line} />}
@@ -34,7 +42,7 @@ export function ActivityTimelineItem({ item, isLast = false }) {
           {item.actionLabel}
         </AppText>
       </View>
-    </View>
+    </PressableScale>
   );
 }
 

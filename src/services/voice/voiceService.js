@@ -14,7 +14,8 @@ import { sanitiseForSpeech } from '../reminder/reminderMessages';
  * in-app previews and the settings test.
  */
 
-const PHASE = 'a later update';
+/** Reached only where the native module is absent — Expo Go, iOS or web. */
+const PHASE = 'an Android development build';
 
 export { sanitiseForSpeech as sanitizeForSpeech };
 

@@ -15,6 +15,7 @@ import {
 import { toCalendarDate } from '../../utils/dates';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
 import { getCycleSummary, buildCycleHistory } from './periodCalculator';
+import { reminderScheduler } from '../reminder/reminderScheduler';
 import { loadSettings } from '../settings/settingsService';
 
 /**
@@ -23,6 +24,14 @@ import { loadSettings } from '../settings/settingsService';
  * Owns validation and orchestration; the maths lives in `periodCalculator` and
  * the SQL in `periodRepository`.
  */
+
+/**
+ * Period nudges hang off the *estimated* date, so any change to history moves
+ * them. Reconciliation regenerates them from the new estimate.
+ */
+export async function reschedulePeriodReminders(reason = 'period-changed') {
+  return reminderScheduler.reconcile(reason);
+}
 
 export async function getPeriodOverview() {
   const [cycles, settings] = await Promise.all([getPeriodCycles(), loadSettings()]);
@@ -82,6 +91,7 @@ export async function startPeriod(date = new Date()) {
     });
 
     logger.info(LOG_CATEGORY.PERIOD, `Period start recorded for ${startDate}`);
+    await reschedulePeriodReminders('period-started');
     return { ok: true, alreadyRecorded: false, cycle };
   } catch (error) {
     logger.error(LOG_CATEGORY.PERIOD, 'Could not record period start', error);
@@ -144,6 +154,7 @@ export async function editCycle(cycleId, changes) {
       ...(startDate ? { startDate } : {}),
       ...('endDate' in changes ? { endDate } : {}),
     });
+    await reschedulePeriodReminders('period-edited');
     return { ok: true, cycle };
   } catch (error) {
     logger.error(LOG_CATEGORY.PERIOD, 'Could not edit cycle', error);
@@ -154,6 +165,7 @@ export async function editCycle(cycleId, changes) {
 export async function removeCycle(cycleId) {
   try {
     await deleteCycle(cycleId);
+    await reschedulePeriodReminders('period-deleted');
     return { ok: true };
   } catch (error) {
     logger.error(LOG_CATEGORY.PERIOD, 'Could not delete cycle', error);

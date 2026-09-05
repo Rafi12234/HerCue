@@ -12,7 +12,7 @@ import {
   setMedicineActive,
   updateMedicine,
 } from '../../database/repositories/medicineRepository';
-import { cancelFutureOccurrences } from '../../database/repositories/reminderRepository';
+import { cancelFutureAlarmsFor } from '../reminder/cancellation';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
 import { reminderScheduler } from '../reminder/reminderScheduler';
 
@@ -58,6 +58,12 @@ export async function saveMedicine(input) {
   const times = [...new Set(input.times)].sort();
 
   try {
+    // Alarms are torn down before the rows change, because a CANCELLED row is
+    // invisible to reconciliation and its alarm would survive as a ghost.
+    if (input.id) {
+      await cancelFutureAlarmsFor({ medicineId: input.id });
+    }
+
     const medicine = await withTransaction(async (db) => {
       const saved = input.id
         ? await updateMedicine(
@@ -85,12 +91,6 @@ export async function saveMedicine(input) {
           );
 
       await replaceSchedules(saved.id, times, repeatType, input.daysOfWeek, db);
-
-      // The old times must not keep firing after an edit.
-      if (input.id) {
-        await cancelFutureOccurrences({ medicineId: saved.id }, new Date(), db);
-      }
-
       return saved;
     });
 
@@ -105,10 +105,8 @@ export async function saveMedicine(input) {
 
 export async function setActive(medicineId, active) {
   try {
-    await withTransaction(async (db) => {
-      await setMedicineActive(medicineId, active, db);
-      if (!active) await cancelFutureOccurrences({ medicineId }, new Date(), db);
-    });
+    if (!active) await cancelFutureAlarmsFor({ medicineId });
+    await setMedicineActive(medicineId, active);
 
     await reminderScheduler.reconcile('medicine-toggled');
     return { ok: true };
@@ -121,10 +119,8 @@ export async function setActive(medicineId, active) {
 /** Soft delete: alarms stop, history keeps its meaning. */
 export async function archive(medicineId) {
   try {
-    await withTransaction(async (db) => {
-      await archiveMedicine(medicineId, db);
-      await cancelFutureOccurrences({ medicineId }, new Date(), db);
-    });
+    await cancelFutureAlarmsFor({ medicineId });
+    await archiveMedicine(medicineId);
 
     await reminderScheduler.reconcile('medicine-archived');
     return { ok: true };

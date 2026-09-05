@@ -25,6 +25,7 @@ class ReminderRecord : Record {
     @Field var speak: Boolean = true
     @Field var snoozeMinutes: Int = 15
     @Field var followUpMinutes: Int? = null
+    @Field var deepLink: String = "/"
 
     fun toPayload() = ReminderPayload(
         occurrenceId = occurrenceId,
@@ -39,7 +40,8 @@ class ReminderRecord : Record {
         vibrate = vibrate,
         speak = speak,
         snoozeMinutes = snoozeMinutes,
-        followUpMinutes = followUpMinutes
+        followUpMinutes = followUpMinutes,
+        deepLink = deepLink
     )
 }
 

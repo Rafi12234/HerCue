@@ -10,13 +10,15 @@ import {
 } from '../../database/repositories/activityRepository';
 import { getActiveMedicinesWithSchedules } from '../../database/repositories/medicineRepository';
 import {
+  clearNativeScheduleId,
   createOccurrence,
   getOccurrencesForRange,
   getPendingOccurrences,
   updateOccurrenceStatus,
 } from '../../database/repositories/reminderRepository';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
-import { getAllReminderConfigs, getQuietHours } from '../settings/settingsService';
+import { getPeriodOverview } from '../period/periodService';
+import { getAllReminderConfigs, getQuietHours, loadSettings } from '../settings/settingsService';
 import { generateExpectedOccurrences } from './occurrenceGenerator';
 
 /**
@@ -49,10 +51,15 @@ async function loadLastCompletions() {
 /**
  * An occurrence nobody answered becomes MISSED — a dismissed notification is
  * never treated as a completion (doc 05 §15).
+ *
+ * Period nudges are excluded: they are informational and carry no action, so
+ * "missing" one means nothing and would only clutter the history.
  */
 async function sweepMissed(now) {
   const cutoff = subMinutes(now, SCHEDULING.missedAfterMinutes);
-  const stale = await getPendingOccurrences({ before: cutoff });
+  const stale = (await getPendingOccurrences({ before: cutoff })).filter(
+    (occurrence) => occurrence.type !== REMINDER_TYPES.PERIOD
+  );
   if (stale.length === 0) return 0;
 
   for (const occurrence of stale) {
@@ -87,11 +94,13 @@ export async function reconcileOccurrences({ schedulePort, reason = 'unspecified
 
   const missedCount = await sweepMissed(now);
 
-  const [configs, medicines, quietHours, lastCompletions] = await Promise.all([
+  const [configs, medicines, quietHours, lastCompletions, settings, period] = await Promise.all([
     getAllReminderConfigs(),
     getActiveMedicinesWithSchedules(),
     getQuietHours(),
     loadLastCompletions(),
+    loadSettings(),
+    getPeriodOverview(),
   ]);
 
   const until = addHours(now, SCHEDULING.horizonHours);
@@ -101,6 +110,12 @@ export async function reconcileOccurrences({ schedulePort, reason = 'unspecified
     medicines,
     lastCompletions,
     quietHours,
+    period: {
+      enabled: settings.periodRemindersEnabled,
+      estimatedNextDate: period.estimatedNextDate,
+      daysBefore: settings.periodRemindDaysBefore,
+      remindAt: settings.periodRemindTime,
+    },
     now,
     until,
   });
@@ -136,13 +151,28 @@ export async function reconcileOccurrences({ schedulePort, reason = 'unspecified
     cancelled += 1;
   }
 
+  // Anything already cancelled in SQL by a domain service (a medicine edit, for
+  // example) may still hold a live Android alarm. Sweeping them here is what
+  // stops ghost reminders firing for a schedule the user changed.
+  let ghostsCleared = 0;
+  for (const occurrence of stored) {
+    if (occurrence.status !== OCCURRENCE_STATUS.CANCELLED) continue;
+    if (!occurrence.nativeScheduleId) continue;
+
+    await schedulePort.cancel(occurrence.id);
+    await clearNativeScheduleId(occurrence.id);
+    ghostsCleared += 1;
+  }
+
+  const scheduleContext = { settings, definitions: configs };
+
   let scheduled = 0;
   let inexact = 0;
   for (const occurrence of storedByKey.values()) {
     if (occurrence.status !== OCCURRENCE_STATUS.PENDING) continue;
     if (isBefore(new Date(occurrence.scheduledAt), now)) continue;
 
-    const result = await schedulePort.schedule(occurrence);
+    const result = await schedulePort.schedule(occurrence, scheduleContext);
     if (result === 'exact') scheduled += 1;
     else if (result === 'inexact') {
       scheduled += 1;
@@ -150,7 +180,7 @@ export async function reconcileOccurrences({ schedulePort, reason = 'unspecified
     }
   }
 
-  const summary = { created, cancelled, scheduled, inexact, missed: missedCount };
+  const summary = { created, cancelled, ghostsCleared, scheduled, inexact, missed: missedCount };
   logger.info(
     LOG_CATEGORY.SCHEDULER,
     `Reconciliation complete (${reason}): ${JSON.stringify(summary)}`

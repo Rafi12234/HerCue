@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { STATUS_LABELS } from '../../constants/statuses';
 import { categoryColors, colors, statusColors } from '../../theme/colors';
 import { radii } from '../../theme/radii';
 import { spacing } from '../../theme/spacing';
@@ -8,23 +9,19 @@ import { AppText } from '../common/AppText';
 import { CategoryGlyph } from '../common/CategoryGlyph';
 import { PressableScale } from '../common/PressableScale';
 
-/**
- * One row in the notification inbox.
- *
- * Built now so Phase 9 only has to supply rows — nothing is rendered until
- * real notification history exists.
- */
-export function NotificationItem({ item, onPress, isLast = false }) {
+/** One row in the notification inbox. */
+export function NotificationItem({ item, onPress, onLongPress, isLast = false }) {
   const accent = categoryColors[item.type] ?? categoryColors.WATER;
   const status = statusColors[item.status] ?? statusColors.PENDING;
 
   return (
     <PressableScale
       onPress={onPress}
+      onLongPress={onLongPress}
       scaleTo={0.99}
       haptic="selection"
       style={[styles.row, isLast && styles.rowLast]}
-      accessibilityLabel={item.title}
+      accessibilityLabel={`${item.title}. ${item.isRead ? 'Read' : 'Unread'}`}
     >
       <View style={[styles.iconBox, { backgroundColor: accent.tint }]}>
         <CategoryGlyph type={item.type} size={16} color={accent.deep} strokeWidth={2.2} />
@@ -32,7 +29,11 @@ export function NotificationItem({ item, onPress, isLast = false }) {
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <AppText variant="bodyStrong" numberOfLines={1} style={styles.title}>
+          <AppText
+            variant={item.isRead ? 'body' : 'bodyStrong'}
+            numberOfLines={1}
+            style={styles.title}
+          >
             {item.title}
           </AppText>
           <AppText variant="caption" style={styles.time}>
@@ -43,9 +44,17 @@ export function NotificationItem({ item, onPress, isLast = false }) {
         <AppText variant="caption" numberOfLines={2}>
           {item.body}
         </AppText>
+
+        {item.status ? (
+          <View style={[styles.statusPill, { backgroundColor: status.tint }]}>
+            <AppText variant="caption" color={status.deep} numberOfLines={1}>
+              {STATUS_LABELS[item.status] ?? item.status}
+            </AppText>
+          </View>
+        ) : null}
       </View>
 
-      {!item.isRead ? <View style={[styles.unread, { backgroundColor: status.base }]} /> : null}
+      {!item.isRead ? <View style={[styles.unread, { backgroundColor: accent.base }]} /> : null}
     </PressableScale>
   );
 }
@@ -72,6 +81,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     minWidth: 0,
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs + 2,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
   },
   titleRow: {
     flexDirection: 'row',

@@ -111,10 +111,12 @@ object AlarmScheduler {
             if (payload.scheduledAt > now) {
                 schedule(context, payload)
                 restored += 1
-            } else {
-                ReminderStore.removeScheduled(context, payload.occurrenceId)
             }
         }
+
+        // Past payloads are left alone here: their notification may still be on
+        // screen with actions attached. Age-based pruning removes them instead.
+        ReminderStore.pruneScheduled(context)
 
         Log.i(TAG, "Restored $restored alarm(s) after boot")
         return restored

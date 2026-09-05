@@ -267,6 +267,18 @@ export async function markOccurrenceMissed(id, executor) {
   return updateOccurrenceStatus(id, OCCURRENCE_STATUS.MISSED, {}, executor);
 }
 
+/**
+ * `updateOccurrenceStatus` uses COALESCE so it can never write a NULL; clearing
+ * the native id after an alarm is cancelled needs its own statement.
+ */
+export async function clearNativeScheduleId(id, executor) {
+  const db = await resolveExecutor(executor);
+  await db.runAsync(
+    'UPDATE reminder_occurrences SET native_schedule_id = NULL, updated_at = ? WHERE id = ?;',
+    [nowIso(), id]
+  );
+}
+
 export async function getPendingOccurrences(options = {}, executor) {
   const db = await resolveExecutor(executor);
   const { type = null, before = null, limit = null } = options;
@@ -300,7 +312,7 @@ export async function getNextPendingOccurrence(options = {}, executor) {
 
 export async function getOccurrencesForRange(start, end, options = {}, executor) {
   const db = await resolveExecutor(executor);
-  const { type = null } = options;
+  const { type = null, medicineId = null, definitionId = null } = options;
 
   const params = [toIso(start), toIso(end)];
   let sql = `SELECT ${OCCURRENCE_COLUMNS} FROM reminder_occurrences WHERE scheduled_at BETWEEN ? AND ?`;
@@ -308,6 +320,14 @@ export async function getOccurrencesForRange(start, end, options = {}, executor)
   if (type) {
     sql += ' AND type = ?';
     params.push(type);
+  }
+  if (medicineId) {
+    sql += ' AND medicine_id = ?';
+    params.push(medicineId);
+  }
+  if (definitionId) {
+    sql += ' AND definition_id = ?';
+    params.push(definitionId);
   }
 
   const rows = await db.getAllAsync(`${sql} ORDER BY scheduled_at ASC;`, params);

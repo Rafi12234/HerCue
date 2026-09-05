@@ -1,18 +1,19 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Alert, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
 
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { AppText } from '../../src/components/common/AppText';
 import { Card } from '../../src/components/common/Card';
-import { DevelopmentNotice } from '../../src/components/common/DevelopmentNotice';
 import { EmptyState } from '../../src/components/common/EmptyState';
 import { PressableScale } from '../../src/components/common/PressableScale';
 import { ScreenContainer } from '../../src/components/common/ScreenContainer';
 import { SectionHeader } from '../../src/components/common/SectionHeader';
 import { NotificationItem } from '../../src/components/notifications/NotificationItem';
-import { getInbox, markAllRead } from '../../src/services/notification/inboxService';
+import { REMINDER_DEEP_LINKS } from '../../src/services/reminder/reminderMessages';
+import { deleteInboxRecord } from '../../src/database/repositories/notificationRepository';
+import { getInbox, markAllRead, markRead } from '../../src/services/notification/inboxService';
 import { EMPTY_COPY } from '../../src/utils/copy';
 import { colors } from '../../src/theme/colors';
 import { layout, spacing } from '../../src/theme/spacing';
@@ -26,6 +27,7 @@ import { LOG_CATEGORY, logger } from '../../src/utils/logger';
  * empty state is what shows today.
  */
 export default function NotificationsScreen() {
+  const router = useRouter();
   const [inbox, setInbox] = useState({ groups: [], unreadCount: 0, totalCount: 0 });
 
   const load = useCallback(async () => {
@@ -46,6 +48,40 @@ export default function NotificationsScreen() {
     await markAllRead();
     await load();
   }, [load]);
+
+  const handleOpen = useCallback(
+    async (item) => {
+      if (!item.isRead) {
+        await markRead(item.id);
+        await load();
+      }
+      const target = REMINDER_DEEP_LINKS[item.type];
+      if (target) router.push(target);
+    },
+    [load, router]
+  );
+
+  // Removing an inbox entry must never remove the activity it refers to.
+  const handleDelete = useCallback(
+    (item) => {
+      Alert.alert(
+        'Remove from inbox?',
+        'This clears the message only. Your activity history keeps the record.',
+        [
+          { text: 'Keep it', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              await deleteInboxRecord(item.id);
+              await load();
+            },
+          },
+        ]
+      );
+    },
+    [load]
+  );
 
   const hasItems = inbox.groups.length > 0;
 
@@ -74,6 +110,8 @@ export default function NotificationsScreen() {
                 <NotificationItem
                   key={item.id}
                   item={item}
+                  onPress={() => handleOpen(item)}
+                  onLongPress={() => handleDelete(item)}
                   isLast={index === group.items.length - 1}
                 />
               ))}
@@ -89,12 +127,6 @@ export default function NotificationsScreen() {
           />
         </Card>
       )}
-
-      <DevelopmentNotice
-        title="Reminder delivery arrives in a later update"
-        message="The inbox is already reading from your device's storage — it fills up once reminders start being sent."
-        style={styles.notice}
-      />
     </ScreenContainer>
   );
 }

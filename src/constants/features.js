@@ -19,8 +19,8 @@ export const FEATURES = {
   periodPersistence: true,
   /** Phase 3 — inbox is fed by real reminder deliveries. */
   notificationInbox: true,
-  /** Phase 10 — week/month/year aggregation. Day timeline is live from Phase 2. */
-  activityAnalytics: false,
+  /** Day timeline plus week/month/year aggregation, all from stored rows. */
+  activityAnalytics: true,
   /** Phase 11 — settings persisted to app_settings. */
   persistentSettings: true,
 };

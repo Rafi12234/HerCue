@@ -150,12 +150,49 @@ export function generateDynamicOccurrence({ definition, lastCompletedAt, quietHo
   ];
 }
 
-/** Everything expected across the horizon, for all four categories. */
+/**
+ * Period: gentle informational nudges ahead of the estimated date.
+ *
+ * The estimate is not a fact, so these carry no actions and the copy stays
+ * tentative (`docs/09_PERIOD_TRACKER_SPEC.md` §6).
+ */
+export function generatePeriodReminderOccurrences({
+  estimatedNextDate,
+  daysBefore = [3, 1, 0],
+  remindAt = '09:00',
+  enabled,
+  from,
+  until,
+}) {
+  if (!enabled || !estimatedNextDate) return [];
+
+  const expected = parseISO(estimatedNextDate);
+
+  return daysBefore
+    .map((offset) => ({ offset, at: applyScheduleTime(remindAt, addDays(expected, -offset)) }))
+    .filter(({ at }) => !isBefore(at, from) && !isAfter(at, until))
+    .map(({ offset, at }) => {
+      const message = buildReminderMessage(REMINDER_TYPES.PERIOD, { daysBefore: offset });
+      return {
+        occurrenceKey: occurrenceKey(REMINDER_TYPES.PERIOD, estimatedNextDate, at.toISOString()),
+        type: REMINDER_TYPES.PERIOD,
+        scheduledAt: at.toISOString(),
+        definitionId: null,
+        medicineId: null,
+        medicineScheduleId: null,
+        message: message.body,
+        metadata: { title: message.title, speech: message.speech },
+      };
+    });
+}
+
+/** Everything expected across the horizon, for all categories. */
 export function generateExpectedOccurrences({
   definitions,
   medicines,
   lastCompletions,
   quietHours,
+  period,
   now,
   until,
 }) {
@@ -177,6 +214,14 @@ export function generateExpectedOccurrences({
       lastCompletedAt: lastCompletions?.[REMINDER_TYPES.BATHROOM] ?? null,
       quietHours,
       now,
+    }),
+    ...generatePeriodReminderOccurrences({
+      estimatedNextDate: period?.estimatedNextDate ?? null,
+      daysBefore: period?.daysBefore,
+      remindAt: period?.remindAt,
+      enabled: period?.enabled,
+      from: now,
+      until,
     }),
   ];
 }

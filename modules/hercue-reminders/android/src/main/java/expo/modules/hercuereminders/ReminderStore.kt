@@ -28,7 +28,9 @@ data class ReminderPayload(
      * For reminders anchored to the last confirmation (food, bathroom): how far
      * ahead to re-arm when the user confirms. Null for fixed-grid reminders.
      */
-    val followUpMinutes: Int?
+    val followUpMinutes: Int?,
+    /** In-app route opened when the notification body is tapped. */
+    val deepLink: String
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("occurrenceId", occurrenceId)
@@ -42,6 +44,7 @@ data class ReminderPayload(
         put("vibrate", vibrate)
         put("speak", speak)
         put("snoozeMinutes", snoozeMinutes)
+        put("deepLink", deepLink)
         if (followUpMinutes != null) put("followUpMinutes", followUpMinutes)
         put("actions", JSONArray().apply {
             actions.forEach { put(JSONObject().apply { put("id", it.id); put("label", it.label) }) }
@@ -73,7 +76,8 @@ data class ReminderPayload(
                     json.getInt("followUpMinutes")
                 } else {
                     null
-                }
+                },
+                deepLink = json.optString("deepLink", "/")
             )
         }
     }
@@ -92,6 +96,9 @@ object ReminderStore {
     private const val PREFS = "hercue_reminders"
     private const val KEY_SCHEDULED = "scheduled"
     private const val KEY_PENDING_ACTIONS = "pending_actions"
+
+    /** How long a fired payload is kept so its notification actions still work. */
+    private const val RETENTION_MS = 48L * 60L * 60L * 1000L
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -120,6 +127,18 @@ object ReminderStore {
 
     fun allScheduled(context: Context): List<ReminderPayload> =
         readScheduled(context).values.toList()
+
+    /**
+     * Drops payloads whose reminder fired long enough ago that no action button
+     * can still be showing, so retaining them for Snooze cannot grow unbounded.
+     */
+    @Synchronized
+    fun pruneScheduled(context: Context) {
+        val cutoff = System.currentTimeMillis() - RETENTION_MS
+        val all = readScheduled(context)
+        val kept = all.filterValues { it.scheduledAt > cutoff }
+        if (kept.size != all.size) writeScheduled(context, kept)
+    }
 
     private fun readScheduled(context: Context): Map<String, ReminderPayload> {
         val raw = prefs(context).getString(KEY_SCHEDULED, null) ?: return emptyMap()

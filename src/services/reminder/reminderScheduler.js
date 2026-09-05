@@ -1,5 +1,5 @@
 import { HerCueReminders } from '../../../modules/hercue-reminders';
-import { ANDROID_NOTIFICATION_CHANNELS, DEFAULTS } from '../../constants/config';
+import { ANDROID_NOTIFICATION_CHANNELS } from '../../constants/config';
 import { REMINDER_TYPES } from '../../constants/reminderTypes';
 import { OCCURRENCE_STATUS } from '../../constants/statuses';
 import {
@@ -8,9 +8,10 @@ import {
 } from '../../database/repositories/reminderRepository';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
 import { failed, ok, unimplemented } from '../serviceResult';
-import { loadSettings } from '../settings/settingsService';
+import { getAllReminderConfigs, loadSettings } from '../settings/settingsService';
+import { buildNativeReminderPayload } from './nativePayload';
 import { createSnoozeOccurrence, reconcileOccurrences } from './reconciliation';
-import { REMINDER_ACTIONS, REMINDER_DEEP_LINKS, buildReminderMessage } from './reminderMessages';
+import { buildReminderMessage } from './reminderMessages';
 
 /**
  * Reminder scheduling adapter.
@@ -24,41 +25,20 @@ import { REMINDER_ACTIONS, REMINDER_DEEP_LINKS, buildReminderMessage } from './r
  * as unavailable is more useful than pretending.
  */
 
-const PHASE = 'a later update';
-
-function channelFor(type) {
-  return type === REMINDER_TYPES.MEDICINE
-    ? ANDROID_NOTIFICATION_CHANNELS.medicine
-    : ANDROID_NOTIFICATION_CHANNELS.reminders;
-}
-
-/** The payload the native layer stores so it can fire without the database. */
-async function toNativePayload(occurrence, settings) {
-  const metadata = occurrence.metadata ?? {};
-  const fallback = buildReminderMessage(occurrence.type, {});
-
-  return {
-    id: occurrence.id,
-    type: occurrence.type,
-    triggerAtMillis: new Date(occurrence.scheduledAt).getTime(),
-    title: metadata.title ?? fallback.title,
-    body: occurrence.message ?? fallback.body,
-    speech: settings.voiceEnabled ? (metadata.speech ?? fallback.speech) : '',
-    channelId: channelFor(occurrence.type),
-    vibrate: settings.vibrationEnabled,
-    deepLink: REMINDER_DEEP_LINKS[occurrence.type] ?? '/',
-    actions: REMINDER_ACTIONS[occurrence.type] ?? [],
-    snoozeMinutes:
-      occurrence.type === REMINDER_TYPES.MEDICINE
-        ? DEFAULTS.medicineSnoozeMinutes
-        : settings.defaultSnoozeMinutes,
-  };
-}
+/** Reached only where the native module is absent — Expo Go, iOS or web. */
+const PHASE = 'an Android development build';
 
 const schedulePort = {
-  async schedule(occurrence) {
-    const settings = await loadSettings();
-    const payload = await toNativePayload(occurrence, settings);
+  /**
+   * @param context optional pre-loaded `{ settings, definitions }` so a
+   *   reconciliation pass does not re-read them for every occurrence.
+   */
+  async schedule(occurrence, context = null) {
+    const settings = context?.settings ?? (await loadSettings());
+    const definitions = context?.definitions ?? (await getAllReminderConfigs());
+    const definition = definitions?.[occurrence.type] ?? null;
+
+    const payload = buildNativeReminderPayload(occurrence, { definition, settings });
     const result = HerCueReminders.schedule(payload);
 
     if (result === 'failed') {
@@ -84,6 +64,8 @@ const schedulePort = {
     logger.debug(LOG_CATEGORY.SCHEDULER, `Alarm cancelled ${occurrenceId}`);
   },
 };
+
+export { schedulePort };
 
 export const reminderScheduler = {
   get isImplemented() {
@@ -165,19 +147,25 @@ export const reminderScheduler = {
     const settings = await loadSettings();
     const message = buildReminderMessage(REMINDER_TYPES.WATER, {});
 
+    // Goes through buildNativeReminderPayload so the test cannot pass while the
+    // real contract is broken.
+    const payload = buildNativeReminderPayload(
+      {
+        id: 'hercue-test-reminder',
+        occurrenceKey: 'hercue-test-reminder',
+        type: REMINDER_TYPES.WATER,
+        scheduledAt: new Date(Date.now() + secondsFromNow * 1000).toISOString(),
+        message: 'This is what a HerCue reminder looks like.',
+        metadata: { title: 'Test reminder', speech: message.speech },
+      },
+      { settings }
+    );
+
     const result = HerCueReminders.schedule({
-      id: 'hercue-test-reminder',
-      type: REMINDER_TYPES.WATER,
-      triggerAtMillis: Date.now() + secondsFromNow * 1000,
-      title: 'Test reminder',
-      body: 'This is what a HerCue reminder looks like.',
-      speech: settings.voiceEnabled ? message.speech : '',
+      ...payload,
       channelId: ANDROID_NOTIFICATION_CHANNELS.reminders,
-      vibrate: settings.vibrationEnabled,
-      deepLink: '/settings',
       actions: [],
-      snoozeMinutes: settings.defaultSnoozeMinutes,
-      isTest: true,
+      deepLink: '/settings',
     });
 
     return result === 'failed' ? failed('The test reminder could not be scheduled.') : ok(result);

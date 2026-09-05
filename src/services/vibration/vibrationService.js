@@ -9,7 +9,8 @@ import { ok, unimplemented } from '../serviceResult';
  * in `utils/haptics`. It is always finite: the phone must never buzz endlessly.
  */
 
-const PHASE = 'a later update';
+/** Reached only where the native module is absent — Expo Go, iOS or web. */
+const PHASE = 'an Android development build';
 
 /** pulse · pause · pulse · longer pause · final pulse */
 export const REMINDER_PATTERN_MS = [0, 320, 180, 320, 320, 480];

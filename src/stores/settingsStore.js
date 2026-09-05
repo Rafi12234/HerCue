@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { DEFAULTS } from '../constants/config';
 import { SETTING_KEYS } from '../constants/settingKeys';
+import { reminderScheduler } from '../services/reminder/reminderScheduler';
 import { loadSettings, updateSetting } from '../services/settings/settingsService';
 import { LOG_CATEGORY, logger } from '../utils/logger';
 
@@ -26,6 +27,10 @@ export const useSettingsStore = create((set, get) => ({
   defaultSnoozeMinutes: DEFAULTS.waterSnoozeMinutes,
   waterDailyGoal: DEFAULTS.waterDailyGoal,
   averageCycleLengthDays: DEFAULTS.averageCycleLengthDays,
+
+  periodRemindersEnabled: DEFAULTS.periodRemindersEnabled,
+  periodRemindDaysBefore: DEFAULTS.periodRemindDaysBefore,
+  periodRemindTime: DEFAULTS.periodRemindTime,
 
   reduceMotion: false,
 
@@ -66,6 +71,16 @@ export const useSettingsStore = create((set, get) => ({
       SETTING_KEYS.QUIET_HOURS_ENABLED,
       !get().quietHoursEnabled
     );
+  },
+
+  async togglePeriodReminders() {
+    await get().setValue(
+      'periodRemindersEnabled',
+      SETTING_KEYS.PERIOD_REMINDERS_ENABLED,
+      !get().periodRemindersEnabled
+    );
+    // Turning these on or off changes which occurrences should exist.
+    await reminderScheduler.reconcile('period-reminders-toggled');
   },
 
   setReduceMotion(reduceMotion) {

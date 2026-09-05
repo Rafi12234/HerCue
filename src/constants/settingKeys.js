@@ -21,6 +21,10 @@ export const SETTING_KEYS = {
 
   AVERAGE_CYCLE_LENGTH_DAYS: 'average_cycle_length_days',
 
+  PERIOD_REMINDERS_ENABLED: 'period_reminders_enabled',
+  PERIOD_REMIND_DAYS_BEFORE: 'period_remind_days_before',
+  PERIOD_REMIND_TIME: 'period_remind_time',
+
   /** Set the first time the database is seeded, so defaults are not re-applied. */
   SEEDED_AT: 'seeded_at',
   /** IANA zone recorded at last reconciliation, for doc 02 §6.4 timezone checks. */

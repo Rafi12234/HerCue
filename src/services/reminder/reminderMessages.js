@@ -37,6 +37,21 @@ function medicineSentence({ name, dosage, instruction }) {
 /** `{ title, body, speech }` for one occurrence. */
 export function buildReminderMessage(type, context = {}) {
   switch (type) {
+    case REMINDER_TYPES.PERIOD: {
+      const days = context.daysBefore ?? 0;
+      const phrase =
+        days === 0
+          ? 'expected around today'
+          : days === 1
+            ? 'expected around tomorrow'
+            : `expected in around ${days} days`;
+
+      return {
+        title: 'Period',
+        body: `Your next period is ${phrase}.`,
+        speech: `Your next period is ${phrase}.`,
+      };
+    }
     case REMINDER_TYPES.MEDICINE: {
       const sentence = medicineSentence(context);
       return {
@@ -81,11 +96,14 @@ export const REMINDER_ACTIONS = {
   [REMINDER_TYPES.FOOD]: [
     { id: 'COMPLETE', label: 'I ate' },
     { id: 'SNOOZE', label: 'Snooze' },
+    { id: 'SKIP', label: 'Not now' },
   ],
   [REMINDER_TYPES.BATHROOM]: [
     { id: 'COMPLETE', label: 'Went' },
     { id: 'SNOOZE', label: 'Snooze' },
   ],
+  // Informational: there is nothing for the user to confirm or complete.
+  [REMINDER_TYPES.PERIOD]: [],
 };
 
 /** Where tapping the notification body should land (doc 05 §14). */
@@ -94,4 +112,5 @@ export const REMINDER_DEEP_LINKS = {
   [REMINDER_TYPES.MEDICINE]: '/medicine',
   [REMINDER_TYPES.FOOD]: '/',
   [REMINDER_TYPES.BATHROOM]: '/',
+  [REMINDER_TYPES.PERIOD]: '/period',
 };

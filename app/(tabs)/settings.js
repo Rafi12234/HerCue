@@ -24,7 +24,6 @@ import {
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { AppText } from '../../src/components/common/AppText';
 import { Card } from '../../src/components/common/Card';
-import { DevelopmentNotice } from '../../src/components/common/DevelopmentNotice';
 import { PressableScale } from '../../src/components/common/PressableScale';
 import { ScreenContainer } from '../../src/components/common/ScreenContainer';
 import { SettingsRow } from '../../src/components/common/SettingsRow';
@@ -223,8 +222,9 @@ export default function SettingsScreen() {
         <SettingsRow
           icon={CalendarHeart}
           label="Period reminders"
-          description="Gentle notes before an expected date"
-          state="soon"
+          description="Which nudges you get, when they arrive, and your cycle length"
+          value={settings.periodRemindersEnabled ? 'On' : 'Off'}
+          onPress={() => router.push('/settings/period')}
           iconTint={categoryColors.PERIOD.tint}
           iconColor={categoryColors.PERIOD.deep}
           isLast
@@ -262,8 +262,8 @@ export default function SettingsScreen() {
           value={`${formatScheduleTime(settings.quietHoursStart)} – ${formatScheduleTime(
             settings.quietHoursEnd
           )}`}
-          description="Editable once reminder scheduling is in place"
-          state="soon"
+          description="When water, food and bathroom reminders should wait"
+          onPress={() => router.push('/settings/quiet-hours')}
           isLast
         />
       </SettingsSection>
@@ -290,8 +290,33 @@ export default function SettingsScreen() {
         <SettingsRow
           icon={ExternalLink}
           label="System notification settings"
-          description="Sound, importance and lock-screen visibility are controlled by Android"
+          description={
+            permissions?.channels?.blocked?.length
+              ? `Muted in Android: ${permissions.channels.blocked.join(', ')}`
+              : 'Sound, importance and lock-screen visibility are controlled by Android'
+          }
+          value={permissions?.channels?.blocked?.length ? 'Needs attention' : undefined}
           onPress={() => permissionService.openSystemSettings()}
+        />
+        <SettingsRow
+          icon={Volume2}
+          label="Spoken reminders"
+          description={
+            permissions?.voiceAvailable
+              ? 'Text-to-speech is available on this device'
+              : 'Text-to-speech isn’t available here — notifications still work'
+          }
+          value={permissions?.voiceAvailable ? 'Ready' : 'Unavailable'}
+        />
+        <SettingsRow
+          icon={Vibrate}
+          label="Vibration"
+          description={
+            permissions?.vibrationAvailable
+              ? 'This device has a vibration motor'
+              : 'No vibration motor detected'
+          }
+          value={permissions?.vibrationAvailable ? 'Ready' : 'Unavailable'}
         />
         <SettingsRow
           icon={BellRing}
@@ -312,8 +337,7 @@ export default function SettingsScreen() {
           icon={Palette}
           label="Theme"
           value="Light"
-          description="A dark theme will only ship at the same quality as the light one"
-          state="soon"
+          description="HerCue uses a single warm light theme"
         />
         <SettingsRow
           icon={SunMoon}
@@ -340,11 +364,6 @@ export default function SettingsScreen() {
           isLast
         />
       </SettingsSection>
-
-      <DevelopmentNotice
-        title="Some settings are still being built"
-        message="Rows marked “Soon” are shown so nothing here pretends to work before it does."
-      />
     </ScreenContainer>
   );
 }

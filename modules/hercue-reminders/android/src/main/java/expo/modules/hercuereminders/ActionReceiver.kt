@@ -89,6 +89,9 @@ class ActionReceiver : BroadcastReceiver() {
         }
 
         ReminderStore.enqueueAction(context, occurrenceId, type, actionId, now, followUpId, followUpAt)
+
+        // Terminal decision: nothing else can be pressed for this reminder.
+        ReminderStore.removeScheduled(context, occurrenceId)
     }
 
     companion object {

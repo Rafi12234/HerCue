@@ -65,8 +65,10 @@ object ReminderNotifier {
             .getLaunchIntentForPackage(context.packageName)
             ?.apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                // Consumed by the JS deep-link handler to open the right screen.
-                data = Uri.parse("hercue://reminder/${payload.type.lowercase()}/${payload.occurrenceId}")
+                // The route comes from the payload so JS owns which screen opens;
+                // native never invents a path that may not exist.
+                data = Uri.parse("hercue://${payload.deepLink.trimStart('/')}")
+                putExtra(AlarmScheduler.EXTRA_OCCURRENCE_ID, payload.occurrenceId)
             } ?: return null
 
         return PendingIntent.getActivity(

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   Nunito_400Regular,
@@ -23,6 +24,9 @@ import { LOG_CATEGORY, logger } from '../src/utils/logger';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/** Routes a notification is allowed to open. Must match `REMINDER_DEEP_LINKS`. */
+const ALLOWED_DEEP_LINKS = new Set(['/', '/medicine', '/period', '/settings', '/activity']);
+
 /** Expo Router renders this for any uncaught error inside a route. */
 export function ErrorBoundary({ error, retry }) {
   logger.error(LOG_CATEGORY.UI, 'Unhandled render error', error);
@@ -36,6 +40,7 @@ export default function RootLayout() {
   const retry = useAppStore((state) => state.retry);
   const resume = useAppStore((state) => state.resume);
   const appState = useRef(AppState.currentState);
+  const router = useRouter();
 
   useReducedMotionSync();
 
@@ -78,6 +83,23 @@ export default function RootLayout() {
     if (isReady || hasFailed) SplashScreen.hideAsync().catch(() => {});
   }, [isReady, hasFailed]);
 
+  // A notification body carries the route it should open. Only routes that
+  // actually exist are honoured, so a stale link can never dead-end.
+  useEffect(() => {
+    if (!isReady) return undefined;
+
+    const open = (url) => {
+      if (!url) return;
+      const { path } = Linking.parse(url);
+      const target = `/${(path ?? '').replace(/^\/+/, '')}`;
+      if (ALLOWED_DEEP_LINKS.has(target)) router.push(target);
+    };
+
+    Linking.getInitialURL().then(open);
+    const subscription = Linking.addEventListener('url', (event) => open(event.url));
+    return () => subscription.remove();
+  }, [isReady, router]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
@@ -105,6 +127,9 @@ export default function RootLayout() {
               options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
             />
             <Stack.Screen name="settings/reminder/[type]" />
+            <Stack.Screen name="settings/quiet-hours" />
+            <Stack.Screen name="settings/period" />
+            <Stack.Screen name="activity/[id]" />
           </Stack>
         )}
       </SafeAreaProvider>
