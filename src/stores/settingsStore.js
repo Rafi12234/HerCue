@@ -1,16 +1,20 @@
 import { create } from 'zustand';
 
 import { DEFAULTS } from '../constants/config';
+import { SETTING_KEYS } from '../constants/settingKeys';
+import { loadSettings, updateSetting } from '../services/settings/settingsService';
+import { LOG_CATEGORY, logger } from '../utils/logger';
 
 /**
- * Current settings snapshot.
+ * Settings snapshot backed by `app_settings`.
  *
- * Phase 11 loads this from `app_settings` on bootstrap and persists every
- * change through `settingsRepository`; today it is session-only, which the
- * Settings screen states plainly rather than implying it is saved.
+ * `hydrate` runs during bootstrap; every mutation writes to SQLite first and
+ * rolls the in-memory value back if the write fails, so what is shown is always
+ * what is stored.
  */
-export const useSettingsStore = create((set) => ({
+export const useSettingsStore = create((set, get) => ({
   persisted: false,
+  saving: false,
 
   voiceEnabled: DEFAULTS.voiceEnabled,
   vibrationEnabled: DEFAULTS.vibrationEnabled,
@@ -20,15 +24,48 @@ export const useSettingsStore = create((set) => ({
   quietHoursEnd: DEFAULTS.quietHoursEnd,
 
   defaultSnoozeMinutes: DEFAULTS.waterSnoozeMinutes,
+  waterDailyGoal: DEFAULTS.waterDailyGoal,
+  averageCycleLengthDays: DEFAULTS.averageCycleLengthDays,
 
   reduceMotion: false,
 
-  toggle(key) {
-    set((state) => ({ [key]: !state[key] }));
+  async hydrate() {
+    const settings = await loadSettings();
+    set({ ...settings, persisted: true });
   },
 
-  setValue(key, value) {
-    set({ [key]: value });
+  async setValue(storeKey, settingKey, value) {
+    const previous = get()[storeKey];
+    set({ [storeKey]: value, saving: true });
+
+    try {
+      await updateSetting(settingKey, value);
+    } catch (error) {
+      logger.error(LOG_CATEGORY.DB, `Could not save setting ${settingKey}`, error);
+      set({ [storeKey]: previous });
+    } finally {
+      set({ saving: false });
+    }
+  },
+
+  toggleVoice() {
+    return get().setValue('voiceEnabled', SETTING_KEYS.VOICE_ENABLED, !get().voiceEnabled);
+  },
+
+  toggleVibration() {
+    return get().setValue(
+      'vibrationEnabled',
+      SETTING_KEYS.VIBRATION_ENABLED,
+      !get().vibrationEnabled
+    );
+  },
+
+  toggleQuietHours() {
+    return get().setValue(
+      'quietHoursEnabled',
+      SETTING_KEYS.QUIET_HOURS_ENABLED,
+      !get().quietHoursEnabled
+    );
   },
 
   setReduceMotion(reduceMotion) {

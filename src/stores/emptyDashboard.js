@@ -1,6 +1,12 @@
 import { DEFAULTS } from '../constants/config';
 
-/** Shape used by Home before any data exists — genuine empty states, no zeros pretending to be history. */
+/**
+ * Fallback shape used before hydration and if a read fails.
+ *
+ * Mirrors what `dashboardService.buildDashboard` returns so screens never have
+ * to guard against two different shapes — genuine empty states, no zeros
+ * pretending to be history.
+ */
 export function buildEmptyDashboard(now = new Date()) {
   return {
     source: 'EMPTY',
@@ -12,17 +18,20 @@ export function buildEmptyDashboard(now = new Date()) {
       lastConfirmedAt: null,
       nextReminderAt: null,
       enabled: false,
+      intervalMinutes: null,
     },
     medicine: {
       takenCount: 0,
       scheduledCount: 0,
       doses: [],
       enabled: false,
+      medicineCount: 0,
     },
     bathroom: {
       lastConfirmedAt: null,
       nextReminderAt: null,
       enabled: false,
+      intervalMinutes: null,
     },
     food: {
       lastConfirmedAt: null,
@@ -36,6 +45,8 @@ export function buildEmptyDashboard(now = new Date()) {
       estimatedNextDate: null,
       averageCycleLengthDays: null,
       cycleCount: 0,
+      isFallbackEstimate: false,
+      daysUntilEstimate: null,
     },
   };
 }

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { RefreshControl, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Animated from 'react-native-reanimated';
 
 import { AppText } from '../../src/components/common/AppText';
@@ -29,13 +29,28 @@ function EntranceItem({ index, children, style }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { data, isPreview, nextReminder, waterProgress } = useDashboard();
+  const { data, isPreview, nextReminder, waterProgress, refresh } = useDashboard();
 
   const scrollRef = useRef(null);
   const cardOffsets = useRef({});
   const [highlights, setHighlights] = useState({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useMarkEntranceComplete(SCREEN_KEY);
+
+  // Water count rolls over at local midnight and other tabs can log activity,
+  // so the projection is re-read whenever Home comes back into view.
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refresh();
+    setIsRefreshing(false);
+  }, [refresh]);
 
   const rememberOffset = useCallback(
     (type) => (event) => {
@@ -55,7 +70,19 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <ScreenContainer tone="home" scrollRef={scrollRef}>
+    <ScreenContainer
+      tone="home"
+      scrollRef={scrollRef}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.accentDeep}
+          colors={[colors.accentDeep]}
+          progressBackgroundColor={colors.surface}
+        />
+      }
+    >
       <HomeHeaderSection isPreview={isPreview} />
 
       <EntranceItem index={0}>

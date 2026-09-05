@@ -25,6 +25,7 @@ export function SettingsRow({
   state = 'ready',
   iconTint = colors.accentSoft,
   iconColor = colors.accentDeep,
+  destructive = false,
   isLast = false,
 }) {
   const isSoon = state === 'soon';
@@ -34,13 +35,22 @@ export function SettingsRow({
   const content = (
     <View style={[styles.row, isLast && styles.rowLast]}>
       {Icon ? (
-        <View style={[styles.iconBox, { backgroundColor: iconTint }]}>
-          <Icon size={17} color={iconColor} strokeWidth={2.1} />
+        <View
+          style={[
+            styles.iconBox,
+            { backgroundColor: destructive ? colors.emberSoft : iconTint },
+          ]}
+        >
+          <Icon size={17} color={destructive ? colors.ember : iconColor} strokeWidth={2.1} />
         </View>
       ) : null}
 
       <View style={styles.labels}>
-        <AppText variant="bodyStrong" numberOfLines={2}>
+        <AppText
+          variant="bodyStrong"
+          numberOfLines={2}
+          color={destructive ? colors.ember : undefined}
+        >
           {label}
         </AppText>
         {description ? (

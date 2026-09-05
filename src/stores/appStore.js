@@ -3,8 +3,10 @@ import { create } from 'zustand';
 import { initializeDatabase } from '../database/db';
 import { notificationService } from '../services/notification/notificationService';
 import { permissionService } from '../services/permissions/permissionService';
+import { seedDefaults } from '../services/settings/settingsService';
 import { LOG_CATEGORY, logger } from '../utils/logger';
 import { useDashboardStore } from './dashboardStore';
+import { useSettingsStore } from './settingsStore';
 
 export const BOOT_STATUS = {
   IDLE: 'IDLE',
@@ -37,12 +39,16 @@ export const useAppStore = create((set, get) => ({
     try {
       const { version } = await initializeDatabase();
 
+      // Configuration defaults, not history — safe and idempotent on every boot.
+      await seedDefaults();
+
       // Channels must exist before any reminder can be delivered later.
       await notificationService.initialize();
 
       const permissions = await permissionService.getSnapshot();
 
-      useDashboardStore.getState().hydrate();
+      await useSettingsStore.getState().hydrate();
+      await useDashboardStore.getState().hydrate();
 
       // Schedule reconciliation belongs here — it lands with Phase 3/4 and the
       // scheduler stub intentionally reports itself as unimplemented until then.

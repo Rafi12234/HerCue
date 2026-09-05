@@ -52,6 +52,18 @@ module.exports = [
     },
   },
   {
+    files: ['__tests__/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+        __DEV__: 'readonly',
+      },
+    },
+  },
+  {
     files: ['*.config.js', 'eslint.config.js'],
     languageOptions: {
       sourceType: 'commonjs',

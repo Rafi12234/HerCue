@@ -38,3 +38,16 @@ export const ACTIVITY_ACTION = {
   SKIPPED: 'SKIPPED',
   MISSED: 'MISSED',
 };
+
+/** Friendly labels for the activity timeline. */
+export const ACTIVITY_ACTION_LABELS = {
+  DRANK: 'Drank',
+  TAKEN: 'Taken',
+  ATE: 'Ate',
+  WENT: 'Went',
+  STARTED: 'Period started',
+  ENDED: 'Period ended',
+  SNOOZED: 'Snoozed',
+  SKIPPED: 'Skipped',
+  MISSED: 'Missed',
+};

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import Constants from 'expo-constants';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -34,7 +34,10 @@ import { radii } from '../../src/theme/radii';
 import { spacing } from '../../src/theme/spacing';
 import { formatScheduleTime } from '../../src/utils/dates';
 import { useAppStore } from '../../src/stores/appStore';
+import { useDashboardStore } from '../../src/stores/dashboardStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { resetDatabase } from '../../src/database/db';
+import { seedDefaults } from '../../src/services/settings/settingsService';
 import {
   EXACT_ALARM_STATUS,
   PERMISSION_STATUS,
@@ -96,6 +99,32 @@ export default function SettingsScreen() {
       setIsRequesting(false);
     }
   };
+
+  // Destructive and irreversible, so it states exactly what goes and asks twice
+  // over (`docs/06_DATABASE_AND_DATA_MODEL.md` §10).
+  const handleClearData = useCallback(() => {
+    Alert.alert(
+      'Clear all data?',
+      'This will remove your reminders, history, medicines and period records from this device. It cannot be undone.',
+      [
+        { text: 'Keep my data', style: 'cancel' },
+        {
+          text: 'Clear everything',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await resetDatabase();
+              await seedDefaults();
+              await useSettingsStore.getState().hydrate();
+              await useDashboardStore.getState().hydrate();
+            } catch {
+              Alert.alert('Couldn’t clear your data', 'Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, []);
 
   return (
     <ScreenContainer tone="settings">
@@ -180,28 +209,28 @@ export default function SettingsScreen() {
 
       <SettingsSection
         title="Reminder behaviour"
-        caption="Saved for this session only until settings storage is switched on."
+        caption="Saved on this device."
       >
         <SettingsRow
           icon={Volume2}
           label="Spoken reminders"
           description="Read the reminder sentence aloud when the device allows it"
           toggleValue={settings.voiceEnabled}
-          onToggle={() => settings.toggle('voiceEnabled')}
+          onToggle={settings.toggleVoice}
         />
         <SettingsRow
           icon={Vibrate}
           label="Reminder vibration"
           description="A short, deliberate pattern — never continuous"
           toggleValue={settings.vibrationEnabled}
-          onToggle={() => settings.toggle('vibrationEnabled')}
+          onToggle={settings.toggleVibration}
         />
         <SettingsRow
           icon={MoonStar}
           label="Quiet hours"
           description="Hold back water, food and bathroom reminders overnight"
           toggleValue={settings.quietHoursEnabled}
-          onToggle={() => settings.toggle('quietHoursEnabled')}
+          onToggle={settings.toggleQuietHours}
         />
         <SettingsRow
           icon={Clock3}
@@ -270,8 +299,9 @@ export default function SettingsScreen() {
         <SettingsRow
           icon={Trash}
           label="Clear all data"
-          description="Available once there is stored history to remove"
-          state="soon"
+          description="Removes your reminders, history and period records from this device"
+          onPress={handleClearData}
+          destructive
           isLast
         />
       </SettingsSection>

@@ -88,6 +88,15 @@ export function getDatabase() {
   return databasePromise;
 }
 
+/**
+ * SQLite has no nested transactions, so repository functions take an optional
+ * executor: passed one, they join the caller's transaction; passed nothing,
+ * they run standalone on the shared connection.
+ */
+export async function resolveExecutor(executor) {
+  return executor ?? (await getDatabase());
+}
+
 /** Called once during app bootstrap, before any repository is used. */
 export async function initializeDatabase() {
   const db = await getDatabase();

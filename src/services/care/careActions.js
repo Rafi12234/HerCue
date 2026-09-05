@@ -3,15 +3,15 @@ import { REMINDER_TYPES } from '../../constants/reminderTypes';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { haptics } from '../../utils/haptics';
 import { LOG_CATEGORY, logger } from '../../utils/logger';
+import { startPeriod as startPeriodService } from '../period/periodService';
 import { reminderScheduler } from '../reminder/reminderScheduler';
+import { completeBathroom, completeFood, completeMedicine, completeWater } from './careService';
 
 /**
  * The single entry point for Home's quick actions.
  *
- * Screens call these instead of touching stores or repositories directly. When
- * Phase 2/3 land, only the bodies here change: each action becomes a
- * transaction that writes an activity row, resolves the occurrence and asks the
- * scheduler to reconcile. The call sites stay exactly as they are.
+ * Persist first, refresh the view-model from SQLite, then celebrate — the
+ * success animation must never appear for a write that failed.
  */
 
 async function reconcileIfAvailable(reason) {
@@ -19,38 +19,52 @@ async function reconcileIfAvailable(reason) {
   await reminderScheduler.reconcile(reason);
 }
 
-async function run(type, apply, reason) {
+async function run(type, persist, reason) {
   try {
-    apply();
+    const result = await persist();
+
+    if (result?.ok === false) {
+      haptics.warning();
+      return { ok: false, message: result.message ?? 'Couldn’t save that. Please try again.' };
+    }
+
+    const store = useDashboardStore.getState();
+    await store.refresh();
+    store.noteConfirmation(type);
+
     haptics.success();
     await reconcileIfAvailable(reason);
-    logger.info(LOG_CATEGORY.UI, `Care action recorded: ${type}`);
-    return { ok: true, persisted: FEATURES.persistentDashboard };
+
+    return { ok: true, duplicate: Boolean(result?.duplicate) };
   } catch (error) {
     logger.error(LOG_CATEGORY.UI, `Care action failed: ${type}`, error);
     haptics.warning();
-    return { ok: false, message: 'Something went wrong saving that. Please try again.' };
+    return { ok: false, message: 'Couldn’t save that. Please try again.' };
   }
 }
 
 export const careActions = {
   drinkWater() {
-    const store = useDashboardStore.getState();
-    return run(REMINDER_TYPES.WATER, store.confirmWater, 'water-completed');
+    return run(REMINDER_TYPES.WATER, () => completeWater(), 'water-completed');
   },
 
   eat() {
-    const store = useDashboardStore.getState();
-    return run(REMINDER_TYPES.FOOD, store.confirmFood, 'food-completed');
+    return run(REMINDER_TYPES.FOOD, () => completeFood(), 'food-completed');
   },
 
   visitBathroom() {
-    const store = useDashboardStore.getState();
-    return run(REMINDER_TYPES.BATHROOM, store.confirmBathroom, 'bathroom-completed');
+    return run(REMINDER_TYPES.BATHROOM, () => completeBathroom(), 'bathroom-completed');
   },
 
   startPeriod(date = new Date()) {
-    const store = useDashboardStore.getState();
-    return run(REMINDER_TYPES.PERIOD, () => store.logPeriodStart(date), 'period-started');
+    return run(REMINDER_TYPES.PERIOD, () => startPeriodService(date), 'period-started');
+  },
+
+  takeMedicine(medicineId, occurrenceId = null) {
+    return run(
+      REMINDER_TYPES.MEDICINE,
+      () => completeMedicine({ medicineId, occurrenceId }),
+      'medicine-completed'
+    );
   },
 };

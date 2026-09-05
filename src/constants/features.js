@@ -6,7 +6,7 @@
  */
 export const FEATURES = {
   /** Phase 2 — repositories read/write real dashboard data. */
-  persistentDashboard: false,
+  persistentDashboard: true,
   /** Phase 3/4 — occurrence scheduling and native alarm delivery. */
   reminderScheduling: false,
   /** Phase 4 — spoken reminder sentence via TextToSpeech. */
@@ -16,21 +16,20 @@ export const FEATURES = {
   /** Phase 5 — medicine CRUD. */
   medicineManagement: false,
   /** Phase 8 — cycle persistence and next-period estimation. */
-  periodPersistence: false,
-  /** Phase 9 — in-app notification inbox. */
-  notificationInbox: false,
-  /** Phase 10 — activity aggregation from SQLite. */
+  periodPersistence: true,
+  /** Phase 9 — in-app notification inbox is wired to SQLite; nothing writes to it yet. */
+  notificationInbox: true,
+  /** Phase 10 — week/month/year aggregation. Day timeline is live from Phase 2. */
   activityAnalytics: false,
   /** Phase 11 — settings persisted to app_settings. */
-  persistentSettings: false,
+  persistentSettings: true,
 };
 
 /**
  * Development preview data for Home.
  *
- * Phase 1 has no repositories yet, so Home renders from an isolated preview
- * module. This is on only in development builds and the UI shows a visible
- * "Preview data" marker whenever it is active, so it can never be mistaken for
- * real history. Release builds fall through to genuine empty states.
+ * SQLite is the primary source from Phase 2, so this is off by default. Set it
+ * to `__DEV__` temporarily to inspect a populated Home without seeding the
+ * database; the UI shows a visible "Preview data" marker whenever it is on.
  */
-export const USE_PREVIEW_DASHBOARD = __DEV__;
+export const USE_PREVIEW_DASHBOARD = false;

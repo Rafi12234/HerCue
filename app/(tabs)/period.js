@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { addDays, addMonths, eachDayOfInterval, format, parseISO } from 'date-fns';
 import { CalendarHeart, Flower2, Info } from 'lucide-react-native';
@@ -16,10 +16,9 @@ import { CycleCalendar } from '../../src/components/period/CycleCalendar';
 import { periodCountdownCopy } from '../../src/components/home/PeriodCard';
 import { DEFAULTS } from '../../src/constants/config';
 import { REMINDER_TYPES } from '../../src/constants/reminderTypes';
-import { useDashboard } from '../../src/hooks/useDashboard';
+import { usePeriodOverview } from '../../src/hooks/usePeriodOverview';
 import { careActions } from '../../src/services/care/careActions';
 import { categoryColors, colors } from '../../src/theme/colors';
-import { radii } from '../../src/theme/radii';
 import { layout, spacing } from '../../src/theme/spacing';
 import { formatMonthYear, formatShortDate } from '../../src/utils/dates';
 import { EMPTY_COPY } from '../../src/utils/copy';
@@ -34,46 +33,57 @@ function toDateSet(startDate, endDate) {
 }
 
 export default function PeriodScreen() {
-  const { data } = useDashboard();
-  const period = data.period;
+  const { overview, reload } = usePeriodOverview();
   const [month, setMonth] = useState(() => new Date());
 
+  const history = overview?.history;
+  const hasHistory = Boolean(history?.length);
+
+  // Every recorded cycle is marked, not only the most recent one, so scrolling
+  // back through the calendar shows real history.
   const confirmedDates = useMemo(
-    () => toDateSet(period.lastStartDate, period.lastEndDate),
-    [period.lastStartDate, period.lastEndDate]
+    () => (history ?? []).flatMap((cycle) => toDateSet(cycle.startDate, cycle.endDate)),
+    [history]
   );
 
+  const estimatedNextDate = overview?.estimatedNextDate ?? null;
+
   const predictedDates = useMemo(() => {
-    if (!period.estimatedNextDate) return [];
-    const start = parseISO(period.estimatedNextDate);
+    if (!estimatedNextDate) return [];
+    const start = parseISO(estimatedNextDate);
     const end = addDays(start, DEFAULTS.averagePeriodDurationDays - 1);
     return eachDayOfInterval({ start, end }).map((day) => format(day, 'yyyy-MM-dd'));
-  }, [period.estimatedNextDate]);
+  }, [estimatedNextDate]);
 
-  const countdown = periodCountdownCopy(period.estimatedNextDate);
-  const hasHistory = Boolean(period.lastStartDate);
+  const handleStart = useCallback(async () => {
+    const result = await careActions.startPeriod(new Date());
+    await reload();
+    return result;
+  }, [reload]);
+
+  const countdown = periodCountdownCopy(estimatedNextDate);
 
   return (
     <ScreenContainer tone="period">
       <AppHeader title="Period" subtitle="Private, kept on this device, and always an estimate." />
 
       <Card tint={accent.tint} style={styles.hero}>
-        {period.estimatedNextDate ? (
+        {estimatedNextDate ? (
           <>
             <AppText variant="overline" color={accent.deep}>
               Expected around
             </AppText>
             <AppText variant="display" numberOfLines={1} style={styles.heroDate}>
-              {formatShortDate(period.estimatedNextDate)}
+              {formatShortDate(estimatedNextDate)}
             </AppText>
             {countdown ? <AppText variant="body">{countdown}</AppText> : null}
-            {period.averageCycleLengthDays ? (
-              <View style={styles.heroMeta}>
-                <AppText variant="caption" color={accent.deep}>
-                  {`Based on an average ${period.averageCycleLengthDays}-day cycle`}
-                </AppText>
-              </View>
-            ) : null}
+            <View style={styles.heroMeta}>
+              <AppText variant="caption" color={accent.deep}>
+                {overview.isFallbackEstimate
+                  ? `Based on your set average of ${overview.averageCycleLengthDays} days`
+                  : `Based on your recorded average of ${overview.averageCycleLengthDays} days`}
+              </AppText>
+            </View>
           </>
         ) : (
           <>
@@ -81,13 +91,9 @@ export default function PeriodScreen() {
               No estimate yet
             </AppText>
             <AppText variant="h2" style={styles.heroDate}>
-              {hasHistory ? 'One more cycle to go' : 'Let’s begin whenever you’re ready'}
+              Let’s begin whenever you’re ready
             </AppText>
-            <AppText variant="body">
-              {hasHistory
-                ? 'After the next start date, HerCue can estimate the following one.'
-                : EMPTY_COPY.noPeriodHistory}
-            </AppText>
+            <AppText variant="body">{EMPTY_COPY.noPeriodHistory}</AppText>
           </>
         )}
 
@@ -96,7 +102,7 @@ export default function PeriodScreen() {
           label="Period started today"
           confirmedLabel="Logged 🌸"
           icon={Flower2}
-          onPress={() => careActions.startPeriod(new Date())}
+          onPress={handleStart}
           fullWidth
           style={styles.heroAction}
         />
@@ -118,28 +124,32 @@ export default function PeriodScreen() {
         />
       </Card>
 
-      <SectionHeader title="Cycle history" style={styles.section} />
+      <SectionHeader
+        title="Cycle history"
+        caption={hasHistory ? `${overview.cycleCount} recorded` : undefined}
+        style={styles.section}
+      />
       {hasHistory ? (
         <Card>
-          <View style={styles.historyRow}>
-            <View style={styles.historyDates}>
-              <AppText variant="bodyStrong" numberOfLines={1}>
-                {period.lastEndDate
-                  ? `${formatShortDate(period.lastStartDate)} – ${formatShortDate(period.lastEndDate)}`
-                  : formatShortDate(period.lastStartDate)}
-              </AppText>
-              <AppText variant="caption">
-                {period.averageCycleLengthDays
-                  ? `Average cycle ${period.averageCycleLengthDays} days`
-                  : 'Cycle length available after the next start date'}
-              </AppText>
+          {history.map((cycle, index) => (
+            <View
+              key={cycle.id}
+              style={[styles.historyRow, index > 0 && styles.historyRowDivided]}
+            >
+              <View style={styles.historyDates}>
+                <AppText variant="bodyStrong" numberOfLines={1}>
+                  {cycle.endDate
+                    ? `${formatShortDate(cycle.startDate)} – ${formatShortDate(cycle.endDate)}`
+                    : formatShortDate(cycle.startDate)}
+                </AppText>
+                <AppText variant="caption">
+                  {cycle.cycleLengthDays
+                    ? `Cycle length ${cycle.cycleLengthDays} days`
+                    : 'First recorded cycle'}
+                </AppText>
+              </View>
             </View>
-            <View style={styles.historyCount}>
-              <AppText variant="caption" color={accent.deep}>
-                {`${period.cycleCount} recorded`}
-              </AppText>
-            </View>
-          </View>
+          ))}
         </Card>
       ) : (
         <Card>
@@ -162,8 +172,8 @@ export default function PeriodScreen() {
       </View>
 
       <DevelopmentNotice
-        title="Cycle storage and estimates arrive in a later update"
-        message="Editing history, end dates and gentle expected-period reminders come with the period module."
+        title="End dates, editing and expected-period reminders come later"
+        message="Cycle starts and the next-date estimate are saved on this device now."
         style={styles.notice}
       />
     </ScreenContainer>
@@ -194,17 +204,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  historyRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    marginTop: spacing.xs,
+    paddingTop: spacing.md,
   },
   historyDates: {
     flex: 1,
     minWidth: 0,
-  },
-  historyCount: {
-    flexShrink: 0,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm + 2,
-    borderRadius: radii.pill,
-    backgroundColor: accent.tint,
   },
   disclaimer: {
     flexDirection: 'row',

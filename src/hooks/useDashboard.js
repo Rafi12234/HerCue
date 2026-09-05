@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { useDashboardStore } from '../stores/dashboardStore';
+import { DASHBOARD_STATUS, useDashboardStore } from '../stores/dashboardStore';
 import {
   selectHasAnyCareData,
   selectMedicineProgress,
@@ -13,11 +13,18 @@ import {
 export function useDashboard() {
   const status = useDashboardStore((state) => state.status);
   const data = useDashboardStore((state) => state.data);
+  const error = useDashboardStore((state) => state.error);
+  const refreshStore = useDashboardStore((state) => state.refresh);
+
+  const refresh = useCallback(() => refreshStore(), [refreshStore]);
 
   return useMemo(
     () => ({
       status,
       data,
+      error,
+      refresh,
+      isLoading: status === DASHBOARD_STATUS.LOADING,
       isPreview: data.source === 'PREVIEW',
       isEmpty: !selectHasAnyCareData(data),
       nextReminder: selectNextReminder(data),
@@ -25,6 +32,6 @@ export function useDashboard() {
       waterProgress: selectWaterProgress(data.water),
       medicineProgress: selectMedicineProgress(data.medicine),
     }),
-    [status, data]
+    [status, data, error, refresh]
   );
 }
